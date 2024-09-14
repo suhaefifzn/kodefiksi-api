@@ -69,6 +69,7 @@ Route::controller(ArticleController::class)
             ->group(function () {
                 Route::get('', 'getArticles');
                 Route::post('', 'addArticle');
+                Route::post('/generate-slug', 'generateSlug');
                 Route::get('/{article:slug}', 'getOneArticle');
                 Route::delete('/{article:slug}', 'deleteArticle');
             });

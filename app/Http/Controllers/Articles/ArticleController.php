@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Str;
 
 // Models - tables
 use App\Models\Article;
@@ -101,5 +102,41 @@ class ArticleController extends Controller
          * Kemudian hapus cache draft dan publish list
          * tergantung pada nilai is_draft yang dikirimkan
          */
+        $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'title' => 'required|string|min:10|max:255',
+            'slug' => 'nullable|string|exists:articles,slug',
+            'img_thumbnail' => 'required|file|mimes:png,jpg,jpeg|max:2048',
+            'is_draft' => 'required|boolean',
+            'body' => 'required|string|min_words(350)'
+        ]);
+
+        /**
+         * If the value of is_draft and slug are true,
+         * it means the article already exists
+         * and the user will change the article's status to draft
+         */
+        if ($request->is_draft and $request->slug) {
+            // do something...
+        }
+    }
+
+    public function generateSlug(Request $request) {
+        $request->validate([
+            'title' => 'required|string|min:10|max:255',
+        ]);
+
+        $slug = Str::slug($request->title, '-');
+        $originalSlug = $slug;
+        $count = 1;
+
+        while(Article::where('slug', $slug)->exists()) {
+            $slug = $originalSlug . '-' . $count;
+            $count++;
+        }
+
+        return $this->successfulResponseJSON(null, [
+            'slug' => $slug
+        ]);
     }
 }

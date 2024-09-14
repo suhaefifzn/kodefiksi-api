@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,7 +18,7 @@ class ArticleFactory extends Factory
     public function definition(): array
     {
         // random user
-        $users = ['9ccfadfa-8db0-4b2d-ab7c-6c042869e1fd', '9cd2c9c8-03b9-4ad5-8833-8633c406103d'];
+        $users = User::all()->pluck('id')->flatten()->toArray();
         $randomUser = array_rand($users);
 
         // wrapp paragraps with tag p
