@@ -70,6 +70,8 @@ Route::controller(ArticleController::class)
                 Route::get('', 'getArticles');
                 Route::post('', 'addArticle');
                 Route::post('/generate-slug', 'generateSlug');
+                Route::post('/upload-image', 'addImage');
+                Route::get('/images', 'getAllBodyImages');
                 Route::get('/{article:slug}', 'getOneArticle');
                 Route::delete('/{article:slug}', 'deleteArticle');
             });

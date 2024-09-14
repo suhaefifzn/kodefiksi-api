@@ -7,9 +7,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 // Models - tables
 use App\Models\Article;
+use App\Models\ArticleImage;
+
+// Custom rules
+use App\Rules\MinWordsRule;
+use App\Rules\TextToBooleanRule;
 
 class ArticleController extends Controller
 {
@@ -94,31 +100,41 @@ class ArticleController extends Controller
     }
 
     public function addArticle(Request $request) {
-        /**
-         * Tambah article baru, jika memiliki banyak image selain img_thumb
-         * maka simpan img tersebut ke table terpisah dan relasikan dengan article yang dibuat
-         * cukup simpan path imgnya saja
-         *
-         * Kemudian hapus cache draft dan publish list
-         * tergantung pada nilai is_draft yang dikirimkan
-         */
         $request->validate([
             'category_id' => 'required|exists:categories,id',
             'title' => 'required|string|min:10|max:255',
             'slug' => 'nullable|string|exists:articles,slug',
-            'img_thumbnail' => 'required|file|mimes:png,jpg,jpeg|max:2048',
-            'is_draft' => 'required|boolean',
-            'body' => 'required|string|min_words(350)'
+            'img_thumbnail' => 'required|file|mimes:png,jpg|max:2048',
+            'is_draft' => ['required', 'string', new TextToBooleanRule()],
+            'body' => ['required', 'string', new MinWordsRule(350)]
         ]);
 
         /**
-         * If the value of is_draft and slug are true,
-         * it means the article already exists
-         * and the user will change the article's status to draft
+         * If the article already exists,
+         * it means the user will update the article
+         * as a draft or publish
          */
-        if ($request->is_draft and $request->slug) {
-            // do something...
+        $articleExists = Article::where('slug', $request->slug)->first();
+        $isDraft = filter_var($request->is_draft, FILTER_VALIDATE_BOOLEAN);
+        $requestData = $request->all();
+        $requestData['category_id'] = (int) $request->category_id;
+        $requestData['is_draft'] = $isDraft;
+        unset($requestData['img_thumbnail']);
+
+        if ($articleExists) {
+            if (auth()->user()->id === $articleExists->user_id) {
+                return self::update(
+                    $requestData, $articleExists->id, $articleExists->img_thumbnail, $request->file('img_thumbnail')
+                );
+            }
+            return $this->failedResponseJSON('Sorry, the action failed because you are not the owner', 403);
         }
+
+        /**
+         * Article is going to be published by the user
+         * or its first time to be saved as a draft
+         */
+        return self::firstCreated($requestData, $request->file('img_thumbnail'));
     }
 
     public function generateSlug(Request $request) {
@@ -138,5 +154,99 @@ class ArticleController extends Controller
         return $this->successfulResponseJSON(null, [
             'slug' => $slug
         ]);
+    }
+
+    /**
+     * This function is used to add images within
+     * the body of an article. Each time an image successfully added,
+     * it must provide a response containing the image's path
+     * because, on the front end, a list will be created for each
+     * successfully uploaded image (in jquery data table)
+     */
+    public function addImage(Request $request) {
+        $request->validate([
+            'image' => 'required|file|mimes:png,jpg|max:2048'
+        ]);
+        $image = $request->file('image');
+        $imageName = $image->hashName();
+        $image->storeAs('public/images/articles', $imageName);
+        $responseData = [
+            'image' => config('app.url') . '/storage/images/articles/' . $imageName
+        ];
+
+        DB::beginTransaction();
+        $create = ArticleImage::create([
+            'user_id' => auth()->user()->id,
+            'path' => 'storage/images/articles/' . $imageName
+        ]);
+
+        if ($create) {
+            DB::commit();
+            return $this->successfulResponseJSON(null, $responseData);
+        }
+
+        DB::rollBack();
+        return $this->failedResponseJSON('Image failed to upload');
+    }
+
+    public function getAllBodyImages() {
+        $articleImages = ArticleImage::where('user_id', auth()->user()->id)
+            ->orderBy('created_at', 'DESC')
+            ->get(['path']);
+
+        return $this->successfulResponseJSON(null, [
+            'article_images' => $articleImages
+        ]);
+    }
+
+    private function update(mixed $requestData, int $articleId, string $pathOldImgThumbnail, $newImgThumbnail) {
+        DB::beginTransaction();
+        unset($requestData['slug']);
+        $pathImageThumbnail = self::storeImageThumbnail($newImgThumbnail, $pathOldImgThumbnail);
+        $requestData['img_thumbnail'] = $pathImageThumbnail;
+        $update = Article::where('id', $articleId)
+            ->update($requestData);
+
+        if ($update) {
+            DB::commit();
+            Redis::del($this->cachePublishListArticlesKey);
+            Redis::del($this->cacheDraftListArticlesKey);
+            return $this->successfulResponseJSON('Article has been successfully updated');
+        }
+
+        DB::rollBack();
+        return $this->failedResponseJSON('Article failed to update');
+    }
+
+    private function firstCreated(mixed $requestData, $newImgThumbnail) {
+        DB::beginTransaction();
+        $requestData['user_id'] = auth()->user()->id;
+        $pathImageThumbnail = self::storeImageThumbnail($newImgThumbnail);
+        $requestData['img_thumbnail'] = $pathImageThumbnail;
+        $create = Article::create($requestData);
+
+        if ($create) {
+            DB::commit();
+            Redis::del($this->cachePublishListArticlesKey);
+            Redis::del($this->cacheDraftListArticlesKey);
+            return $this->successfulResponseJSON('Article has been successfully created');
+        }
+
+        DB::rollBack();
+        return $this->failedResponseJSON('Article failed to create');
+    }
+
+    private function storeImageThumbnail($newImgThumbnail, string $pathOldImgThumbnail = null) {
+        if (!is_null($pathOldImgThumbnail)) {
+            $explodedPath = explode('/', $pathOldImgThumbnail);
+            unset($explodedPath[0]);
+            Storage::delete('public/'. (implode('/', array_values($explodedPath))));
+        }
+
+        $image = $newImgThumbnail;
+        $imageName = $image->hashName();
+        $image->storeAs('public/images/articles', $imageName);
+
+        return 'storage/images/articles/' . $imageName;
     }
 }

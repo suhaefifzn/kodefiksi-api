@@ -20,12 +20,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        /**
-         * Custom validation to check minimum words
-         */
-        Validator::extend('min_words', function ($attribute, $value, $parameters, $validator) {
-            $wordCount = str_word_count($value);
-            return $wordCount >= $parameters[0];
-        }, 'The :attribute must have at least :min words.');
+        //
     }
 }
