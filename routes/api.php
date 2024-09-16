@@ -73,6 +73,7 @@ Route::controller(ArticleController::class)
                 Route::post('/upload-image', 'addImage');
                 Route::get('/images', 'getAllBodyImages');
                 Route::get('/{article:slug}', 'getOneArticle');
+                Route::put('/{article:slug}', 'editArticle');
                 Route::delete('/{article:slug}', 'deleteArticle');
             });
     });

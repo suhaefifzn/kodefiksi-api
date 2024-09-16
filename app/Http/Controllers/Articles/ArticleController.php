@@ -109,32 +109,29 @@ class ArticleController extends Controller
             'body' => ['required', 'string', new MinWordsRule(350)]
         ]);
 
-        /**
-         * If the article already exists,
-         * it means the user will update the article
-         * as a draft or publish
-         */
-        $articleExists = Article::where('slug', $request->slug)->first();
-        $isDraft = filter_var($request->is_draft, FILTER_VALIDATE_BOOLEAN);
-        $requestData = $request->all();
-        $requestData['category_id'] = (int) $request->category_id;
-        $requestData['is_draft'] = $isDraft;
-        unset($requestData['img_thumbnail']);
+        $requestData = self::setRequestData($request);
 
-        if ($articleExists) {
-            if (auth()->user()->id === $articleExists->user_id) {
-                return self::update(
-                    $requestData, $articleExists->id, $articleExists->img_thumbnail, $request->file('img_thumbnail')
-                );
-            }
-            return $this->failedResponseJSON('Sorry, the action failed because you are not the owner', 403);
+        return self::store($requestData, $request->file('img_thumbnail'));
+    }
+
+    public function editArticle(Request $request, Article $article) {
+        $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'title' => 'required|string|min:10|max:255',
+            'img_thumbnail' => 'required|file|mimes:png,jpg|max:2048',
+            'is_draft' => ['required', 'string', new TextToBooleanRule()],
+            'body' => ['required', 'string', new MinWordsRule(350)]
+        ]);
+
+        $requestData = self::setRequestData($request);
+
+        if (auth()->user()->id === $article->user_id) {
+            return self::update(
+                $requestData, $article->id, $article->img_thumbnail, $request->file('img_thumbnail')
+            );
         }
 
-        /**
-         * Article is going to be published by the user
-         * or its first time to be saved as a draft
-         */
-        return self::firstCreated($requestData, $request->file('img_thumbnail'));
+        return $this->failedResponseJSON('Sorry, the action failed because you are not the owner', 403);
     }
 
     public function generateSlug(Request $request) {
@@ -199,6 +196,15 @@ class ArticleController extends Controller
         ]);
     }
 
+    private function setRequestData(mixed $request) {
+        $isDraft = filter_var($request->is_draft, FILTER_VALIDATE_BOOLEAN);
+        $requestData = $request->all();
+        $requestData['category_id'] = (int) $request->category_id;
+        $requestData['is_draft'] = $isDraft;
+        unset($requestData['img_thumbnail']);
+        return $requestData;
+    }
+
     private function update(mixed $requestData, int $articleId, string $pathOldImgThumbnail, $newImgThumbnail) {
         DB::beginTransaction();
         unset($requestData['slug']);
@@ -218,7 +224,7 @@ class ArticleController extends Controller
         return $this->failedResponseJSON('Article failed to update');
     }
 
-    private function firstCreated(mixed $requestData, $newImgThumbnail) {
+    private function store(mixed $requestData, $newImgThumbnail) {
         DB::beginTransaction();
         $requestData['user_id'] = auth()->user()->id;
         $pathImageThumbnail = self::storeImageThumbnail($newImgThumbnail);
