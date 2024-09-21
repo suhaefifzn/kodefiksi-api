@@ -19,9 +19,15 @@ use App\Rules\TextToBooleanRule;
 
 class ArticleController extends Controller
 {
-    protected $cacheOneArticleKey = 'dashboard:article:';
-    protected $cacheDraftListArticlesKey = 'dashboard:articles:draft';
-    protected $cachePublishListArticlesKey = 'dashboard:articles:publish';
+    private $cacheOneArticleKey;
+    private $cacheDraftListArticlesKey;
+    private $cachePublishListArticlesKey;
+
+    public function __construct() {
+        $this->cacheOneArticleKey = parent::getKeyDashboardCacheOneArticle();
+        $this->cacheDraftListArticlesKey = parent::getKeyDashboardDraftArticles();
+        $this->cachePublishListArticlesKey = parent::getKeyDashboardPublishedArticles();
+    }
 
     public function getArticles(Request $request) {
         $isDraft = $request->query('is_draft');
@@ -86,9 +92,7 @@ class ArticleController extends Controller
                 DB::commit();
 
                 // delete from cache
-                Redis::del($this->cacheOneArticleKey . $article->id);
-                Redis::del($this->cacheDraftListArticlesKey);
-                Redis::del($this->cachePublishListArticlesKey);
+                Redis::flushall();
                 return $this->successfulResponseJSON('Article has been successfully deleted');
             }
 
@@ -201,7 +205,9 @@ class ArticleController extends Controller
         $requestData = $request->all();
         $requestData['category_id'] = (int) $request->category_id;
         $requestData['is_draft'] = $isDraft;
+        $requestData['excerpt'] = Str::excerpt(strip_tags($request->body));
         unset($requestData['img_thumbnail']);
+        unset($requestData['_method']);
         return $requestData;
     }
 
@@ -215,8 +221,7 @@ class ArticleController extends Controller
 
         if ($update) {
             DB::commit();
-            Redis::del($this->cachePublishListArticlesKey);
-            Redis::del($this->cacheDraftListArticlesKey);
+            Redis::flushall();
             return $this->successfulResponseJSON('Article has been successfully updated');
         }
 
@@ -233,8 +238,7 @@ class ArticleController extends Controller
 
         if ($create) {
             DB::commit();
-            Redis::del($this->cachePublishListArticlesKey);
-            Redis::del($this->cacheDraftListArticlesKey);
+            Redis::flushall();
             return $this->successfulResponseJSON('Article has been successfully created');
         }
 

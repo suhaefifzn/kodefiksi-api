@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Model>
@@ -27,7 +28,7 @@ class ArticleFactory extends Factory
             $image = '';
 
             if ($index === 2) {
-                $image = '<img src="https://source.unsplash.com/japan/1280x720" alt="Random Image"/>';
+                $image = '<img src="https://picsum.photos/1280/720" alt="Random Image"/>';
             }
 
             return "<p>$paragraph</p>$image";
@@ -46,7 +47,8 @@ class ArticleFactory extends Factory
             'user_id' => $users[$randomUser],
             'category_id' => $categories[$randomCategory],
             'title' => fake()->words(5, true),
-            'img_thumbnail' => 'https://source.unsplash.com/programming/1280x720',
+            'img_thumbnail' => 'https://picsum.photos/1280/720',
+            'excerpt' => Str::excerpt(strip_tags($implodedParagraphs)),
             'body' => $implodedParagraphs,
             'is_draft' => $isDrafts[$randomIsDraft]
         ];

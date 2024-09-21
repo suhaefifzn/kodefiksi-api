@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('slug');
             $table->string('img_thumbnail');
             $table->boolean('is_draft');
+            $table->string('excerpt')->nullable();
             $table->text('body');
             $table->timestamps();
         });

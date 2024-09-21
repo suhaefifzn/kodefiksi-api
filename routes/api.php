@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Articles\ArticleController;
+use App\Http\Controllers\Articles\PublicArticleController;
 use App\Http\Controllers\Authentications\AuthenticationController;
 use App\Http\Controllers\Categories\CategoryController;
 use App\Http\Controllers\Users\UserController;
@@ -64,7 +65,16 @@ Route::controller(CategoryController::class)
 Route::controller(ArticleController::class)
     ->prefix('articles')
     ->group(function () {
-        // all roles
+        // public
+        Route::controller(PublicArticleController::class)
+            ->middleware('auth.client')
+            ->prefix('public')
+            ->group(function () {
+                Route::get('', 'getArticles');
+                Route::get('/{article:slug}', 'getOneArticle');
+            });
+
+        // members
         Route::middleware('auth.jwt')
             ->group(function () {
                 Route::get('', 'getArticles');
