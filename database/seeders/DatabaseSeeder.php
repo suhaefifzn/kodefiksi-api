@@ -35,6 +35,22 @@ class DatabaseSeeder extends Seeder
             'is_admin' => false
         ]);
 
+        User::factory()->create([
+            'name' => 'Member Dua',
+            'username' => 'member2',
+            'email' => 'member2@gmail.com',
+            'password' => Hash::make('password'),
+            'is_admin' => false
+        ]);
+
+        User::factory()->create([
+            'name' => 'Member Tiga',
+            'username' => 'member3',
+            'email' => 'member3@gmail.com',
+            'password' => Hash::make('password'),
+            'is_admin' => false
+        ]);
+
         $this->call(CategorySeeder::class);
         Article::factory(200)->create();
     }

@@ -20,6 +20,7 @@ class ArticleFactory extends Factory
     {
         // random user
         $users = User::all()->pluck('id')->flatten()->toArray();
+        unset($users[count($users) - 1]); // delete last user id
         $randomUser = array_rand($users);
 
         // wrapp paragraps with tag p

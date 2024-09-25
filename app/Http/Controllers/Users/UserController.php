@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 // Models - tables
 use App\Models\User;
 use App\Models\Category;
+use App\Models\Article;
 
 class UserController extends Controller
 {
@@ -172,6 +173,13 @@ class UserController extends Controller
     public function deleteUser(User $user) {
         if (auth()->user()->id === $user->id) {
             return $this->failedResponseJSON('Please do not delete yourself, you mean so much to me :)');
+        }
+
+        // check articles
+        $articleExists = Article::where('user_id', $user->id)->exists();
+
+        if ($articleExists) {
+            return $this->failedResponseJSON('The user could not be deleted because they have articles', 400);
         }
 
         DB::beginTransaction();
