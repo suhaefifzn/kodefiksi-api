@@ -41,6 +41,13 @@ class AuthenticationController extends Controller
         }
 
         auth()->logout();
-        return $this->successfulResponseJSON("The access token has been successfully invalidated");
+        return $this->successfulResponseJSON('The access token has been successfully invalidated');
+    }
+
+    public function check() {
+        $token = JWTAuth::getToken()->get();
+        return $this->successfulResponseJSON(null, [
+            'token' => $token
+        ]);
     }
 }

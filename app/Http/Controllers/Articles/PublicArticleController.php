@@ -46,6 +46,21 @@ class PublicArticleController extends Controller
                 ->with(['category:id,name,slug', 'user:id,name,username'])
                 ->first();
             $article = $article->toArray();
+
+            // get related articles
+            $relatedArticles = Article::where('category_id', $article['category_id'])
+                ->orderBy('created_at', 'DESC')
+                ->limit(3)
+                ->get(['slug', 'title', 'img_thumbnail', 'excerpt']);
+
+            // get newest articles
+            $newestArticles = Article::orderBy('created_at', 'DESC')
+                ->limit(5)
+                ->get(['slug', 'title', 'img_thumbnail', 'created_at']);
+
+            $article['related_articles'] = $relatedArticles;
+            $article['newest_articles'] = $newestArticles;
+
             unset($article['category_id']);
             unset($article['user_id']);
 

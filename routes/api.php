@@ -13,12 +13,23 @@ Route::controller(AuthenticationController::class)
     ->group(function () {
         Route::post('', 'login');
         Route::delete('', 'logout')->middleware('auth.jwt');
+        Route::get('/check', 'check')->middleware('auth.jwt');
     });
 
 // Users
 Route::controller(UserController::class)
     ->prefix('users')
     ->group(function () {
+        // all roles
+        Route::prefix('my')
+            ->middleware('auth.jwt')
+            ->group(function () {
+                Route::get('/profile', 'getProfile');
+                Route::put('/profile', 'updateProfile');
+                Route::put('/password', 'updatePassword');
+                Route::post('/image', 'updateImage');
+            });
+
         // admin only
         Route::middleware('auth.admin')
             ->group(function () {
@@ -28,16 +39,6 @@ Route::controller(UserController::class)
                 Route::delete('/{user:username}', 'deleteUser');
                 Route::put('/{user:username}', 'updateProfileUser');
                 Route::put('/{user:username}/password', 'updatePasswordUser');
-            });
-
-        // all roles
-        Route::prefix('my')
-            ->middleware('auth.jwt')
-            ->group(function () {
-                Route::get('/profile', 'getProfile');
-                Route::put('/profile', 'updateProfile');
-                Route::put('/password', 'updatePassword');
-                Route::post('/image', 'updateImage');
             });
     });
 

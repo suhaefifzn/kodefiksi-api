@@ -110,7 +110,7 @@ class UserController extends Controller
 
                 DB::commit();
                 return $this->successfulResponseJSON(null, [
-                    'image_url' => config('app.url') . $data['image']
+                    'image_url' => config('app.url') . '/' . $data['image']
                 ]);
             }
         }

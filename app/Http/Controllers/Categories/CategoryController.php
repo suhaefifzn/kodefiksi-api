@@ -97,13 +97,23 @@ class CategoryController extends Controller
         $query = $category->articles()->with($selectedUserColumns);
 
         if (auth()->user()->is_admin) {
-            $articles = $query->get($selectedArticleColumns);
+            $allArticles = $query->get($selectedArticleColumns);
+            $draftArticles = collect($allArticles)->where('is_draft', true)->count();
+            $publishArticles = collect($allArticles)->where('is_draft', false)->count();
         } else {
-            $articles = $query->where('use_id', auth()->user()->id)
-                ->get($selectedArticleColumns);
+            $query = $query->where('user_id', auth()->user()->id);
+            $allArticles = $query->get($selectedArticleColumns);
+            $draftArticles = collect($allArticles)->where('is_draft', true)->count();
+            $publishArticles = collect($allArticles)->where('is_draft', false)->count();
         }
 
-        $category['articles_count'] = $articles->count();
+        $articles = [
+            'total' => $allArticles->count(),
+            'draft_count' => $draftArticles,
+            'publish_count' => $publishArticles,
+            'article_list' => $allArticles
+        ];
+
         $category['articles'] = $articles;
 
         return $this->successfulResponseJSON(null, $category);
