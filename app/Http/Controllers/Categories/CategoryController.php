@@ -77,7 +77,7 @@ class CategoryController extends Controller
 
     // * All Roles
     public function getCategories() {
-        $categories = Category::select('name', 'slug')->get();
+        $categories = Category::all();
         return $this->successfulResponseJSON(null, [
             'categories' => $categories
         ]);

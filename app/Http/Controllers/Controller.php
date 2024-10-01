@@ -6,8 +6,8 @@ abstract class Controller
 {
     // dashboard cache key
     private $dashboardCacheOneArticleKey = 'dashboard:article:';
-    private $dashboardCacheDraftListArticlesKey = 'dashboard:articles:draft';
-    private $dashboardCachePublishListArticlesKey = 'dashboard:articles:publish';
+    private $dashboardCacheDraftListArticlesKey = 'dashboard:articles:draft:';
+    private $dashboardCachePublishListArticlesKey = 'dashboard:articles:publish:';
 
     // public cache key
     private $publicCacheArticlesPerPaginationKey = 'public:articles:page:';
@@ -43,12 +43,12 @@ abstract class Controller
         return $this->dashboardCacheOneArticleKey . $articleId;
     }
 
-    protected function getKeyDashboardDraftArticles() {
-        return $this->dashboardCacheDraftListArticlesKey;
+    protected function getKeyDashboardDraftArticles($userId) {
+        return $this->dashboardCacheDraftListArticlesKey . $userId;
     }
 
-    protected function getKeyDashboardPublishedArticles() {
-        return $this->dashboardCachePublishListArticlesKey;
+    protected function getKeyDashboardPublishedArticles($userId) {
+        return $this->dashboardCachePublishListArticlesKey . $userId;
     }
 
     protected function getKeyPublicOneArticle($articleSlug = '') {

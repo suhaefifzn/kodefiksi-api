@@ -15,7 +15,7 @@ class Category extends Model
     use HasFactory, HasSlug;
 
     protected $guarded = ['id'];
-    protected $hidden = ['id', 'created_at', 'updated_at'];
+    protected $hidden = ['created_at', 'updated_at'];
 
     /**
      * Get the options for generating the slug.

@@ -34,7 +34,7 @@ class ArticleFactory extends Factory
 
             return "<p>$paragraph</p>$image";
         }, $paragraphs, array_keys($paragraphs));
-        $implodedParagraphs = implode('\n', $wrappedParagraphs);
+        $implodedParagraphs = implode('', $wrappedParagraphs);
 
         // random category
         $categories = [1, 2, 3];

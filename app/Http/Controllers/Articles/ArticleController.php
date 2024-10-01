@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 // Models - tables
 use App\Models\Article;
 use App\Models\ArticleImage;
+use App\Models\Category;
 
 // Custom rules
 use App\Rules\MinWordsRule;
@@ -25,15 +26,15 @@ class ArticleController extends Controller
 
     public function __construct() {
         $this->cacheOneArticleKey = parent::getKeyDashboardCacheOneArticle();
-        $this->cacheDraftListArticlesKey = parent::getKeyDashboardDraftArticles();
-        $this->cachePublishListArticlesKey = parent::getKeyDashboardPublishedArticles();
+        $this->cacheDraftListArticlesKey = parent::getKeyDashboardDraftArticles(auth()->user()->id);
+        $this->cachePublishListArticlesKey = parent::getKeyDashboardPublishedArticles(auth()->user()->id);
     }
 
     public function getArticles(Request $request) {
         $isDraft = $request->query('is_draft');
-        $selectedArticleColumns = ['title', 'slug', 'is_draft', 'category_id'];
+        $selectedArticleColumns = ['title', 'slug', 'is_draft', 'created_at', 'updated_at', 'category_id', 'user_id'];
         $query = Article::where('user_id', auth()->user()->id)
-            ->with('category:id,name')
+            ->with(['category:id,name', 'user:id,username'])
             ->orderBy('id', 'DESC');
 
         if ($isDraft) {
@@ -122,7 +123,7 @@ class ArticleController extends Controller
         $request->validate([
             'category_id' => 'required|exists:categories,id',
             'title' => 'required|string|min:10|max:255',
-            'img_thumbnail' => 'required|file|mimes:png,jpg|max:2048',
+            'img_thumbnail' => 'nullable|file|mimes:png,jpg|max:2048',
             'is_draft' => ['required', 'string', new TextToBooleanRule()],
             'body' => ['required', 'string', new MinWordsRule(350)]
         ]);
@@ -200,6 +201,24 @@ class ArticleController extends Controller
         ]);
     }
 
+    public function getStats() {
+        $categoriesStats = Category::select('id', 'name', 'slug')
+            ->withCount(['articles' => function ($query) {
+                $query->where('user_id', auth()->user()->id);
+            }])->get();
+        $lastArticle = Article::select('id', 'title', 'slug', 'is_draft', 'excerpt', 'created_at', 'updated_at')
+            ->where('user_id', auth()->user()->id)
+            ->orderBy('created_at', 'DESC')
+            ->first();
+
+        $response = [
+            'stats' => $categoriesStats,
+            'last_article' => $lastArticle
+        ];
+
+        return $this->successfulResponseJSON(null, $response);
+    }
+
     private function setRequestData(mixed $request) {
         $isDraft = filter_var($request->is_draft, FILTER_VALIDATE_BOOLEAN);
         $requestData = $request->all();
@@ -214,8 +233,14 @@ class ArticleController extends Controller
     private function update(mixed $requestData, int $articleId, string $pathOldImgThumbnail, $newImgThumbnail) {
         DB::beginTransaction();
         unset($requestData['slug']);
-        $pathImageThumbnail = self::storeImageThumbnail($newImgThumbnail, $pathOldImgThumbnail);
-        $requestData['img_thumbnail'] = $pathImageThumbnail;
+
+        if ($newImgThumbnail) {
+            $pathImageThumbnail = self::storeImageThumbnail($newImgThumbnail, $pathOldImgThumbnail);
+            $requestData['img_thumbnail'] = $pathImageThumbnail;
+        } else {
+            unset($requestData['img_thumbnail']);
+        }
+
         $update = Article::where('id', $articleId)
             ->update($requestData);
 
