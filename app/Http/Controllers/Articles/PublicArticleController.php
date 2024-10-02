@@ -45,28 +45,33 @@ class PublicArticleController extends Controller
                 ->where('is_draft', false)
                 ->with(['category:id,name,slug', 'user:id,name,username'])
                 ->first();
-            $article = $article->toArray();
 
-            // get related articles
-            $relatedArticles = Article::where('category_id', $article['category_id'])
-                ->orderBy('created_at', 'DESC')
-                ->limit(3)
-                ->get(['slug', 'title', 'img_thumbnail', 'excerpt']);
+            if ($article) {
+                $article = $article->toArray();
 
-            // get newest articles
-            $newestArticles = Article::orderBy('created_at', 'DESC')
-                ->limit(5)
-                ->get(['slug', 'title', 'img_thumbnail', 'created_at']);
+                // get related articles
+                $relatedArticles = Article::where('category_id', $article['category_id'])
+                    ->orderBy('created_at', 'DESC')
+                    ->limit(3)
+                    ->get(['slug', 'title', 'img_thumbnail', 'excerpt']);
 
-            $article['related_articles'] = $relatedArticles;
-            $article['newest_articles'] = $newestArticles;
+                // get newest articles
+                $newestArticles = Article::orderBy('created_at', 'DESC')
+                    ->limit(5)
+                    ->get(['slug', 'title', 'img_thumbnail', 'created_at']);
 
-            unset($article['category_id']);
-            unset($article['user_id']);
+                $article['related_articles'] = $relatedArticles;
+                $article['newest_articles'] = $newestArticles;
 
-            // save to cache
-            $encodedArticle = json_encode($article);
-            Redis::set(parent::getKeyPublicOneArticle($article['slug']), $encodedArticle);
+                unset($article['category_id']);
+                unset($article['user_id']);
+
+                // save to cache
+                $encodedArticle = json_encode($article);
+                Redis::set(parent::getKeyPublicOneArticle($article['slug']), $encodedArticle);
+            }
+
+            return $this->failedResponseJSON('Article was not found', 404);
         }
 
         return $this->successfulResponseJSON(null, $article);
