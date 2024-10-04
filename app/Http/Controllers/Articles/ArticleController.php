@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 
 // Models - tables
 use App\Models\Article;
@@ -165,21 +165,29 @@ class ArticleController extends Controller
      * because, on the front end, a list will be created for each
      * successfully uploaded image (in jquery data table)
      */
-    public function addImage(Request $request) {
+    public function addImage(Request $request)
+    {
         $request->validate([
             'image' => 'required|file|mimes:png,jpg|max:2048'
         ]);
         $image = $request->file('image');
         $imageName = $image->hashName();
-        $image->storeAs('public/images/articles', $imageName);
+        $destinationPath = public_path('images/articles');
+
+        if (!File::exists($destinationPath)) {
+            File::makeDirectory($destinationPath, 0755, true);
+        }
+
+        $image->move($destinationPath, $imageName);
+
         $responseData = [
-            'image' => config('app.url') . '/storage/images/articles/' . $imageName
+            'image' => config('app.url') . '/images/articles/' . $imageName
         ];
 
         DB::beginTransaction();
         $create = ArticleImage::create([
             'user_id' => auth()->user()->id,
-            'path' => 'storage/images/articles/' . $imageName
+            'path' => 'images/articles/' . $imageName
         ]);
 
         if ($create) {
@@ -190,6 +198,7 @@ class ArticleController extends Controller
         DB::rollBack();
         return $this->failedResponseJSON('Image failed to upload');
     }
+
 
     public function getAllBodyImages() {
         $articleImages = ArticleImage::where('user_id', auth()->user()->id)
@@ -274,17 +283,26 @@ class ArticleController extends Controller
         return $this->failedResponseJSON('Article failed to create');
     }
 
-    private function storeImageThumbnail($newImgThumbnail, string $pathOldImgThumbnail = null) {
+    private function storeImageThumbnail($newImgThumbnail, string $pathOldImgThumbnail = null)
+    {
         if (!is_null($pathOldImgThumbnail)) {
-            $explodedPath = explode('/', $pathOldImgThumbnail);
-            unset($explodedPath[0]);
-            Storage::delete('public/'. (implode('/', array_values($explodedPath))));
+            $oldImagePath = public_path($pathOldImgThumbnail);
+            if (File::exists($oldImagePath)) {
+                File::delete($oldImagePath);
+            }
         }
 
         $image = $newImgThumbnail;
         $imageName = $image->hashName();
-        $image->storeAs('public/images/articles', $imageName);
 
-        return 'storage/images/articles/' . $imageName;
+        $destinationPath = public_path('images/articles');
+
+        if (!File::exists($destinationPath)) {
+            File::makeDirectory($destinationPath, 0755, true);
+        }
+
+        $image->move($destinationPath, $imageName);
+
+        return 'images/articles/' . $imageName;
     }
 }
