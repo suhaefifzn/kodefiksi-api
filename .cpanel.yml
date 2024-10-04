@@ -1,5 +1,5 @@
 ---
 deployment:
 tasks:
-- export DEPLOYPATH=/home/kodw2677/public_html/api_kodefiksi
+- export DEPLOYPATH=/home/kodw2677/public_html/api.kodefiksi
 - /bin/cp -R * $DEPLOYPATH
