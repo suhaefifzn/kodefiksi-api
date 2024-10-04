@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Articles;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
 
@@ -20,16 +19,6 @@ use App\Rules\TextToBooleanRule;
 
 class ArticleController extends Controller
 {
-    private $cacheOneArticleKey;
-    private $cacheDraftListArticlesKey;
-    private $cachePublishListArticlesKey;
-
-    public function __construct() {
-        $this->cacheOneArticleKey = parent::getKeyDashboardCacheOneArticle();
-        $this->cacheDraftListArticlesKey = parent::getKeyDashboardDraftArticles(auth()->user()->id);
-        $this->cachePublishListArticlesKey = parent::getKeyDashboardPublishedArticles(auth()->user()->id);
-    }
-
     public function getArticles(Request $request) {
         $isDraft = $request->query('is_draft');
         $selectedArticleColumns = ['title', 'slug', 'is_draft', 'created_at', 'updated_at', 'category_id', 'user_id'];
@@ -40,24 +29,7 @@ class ArticleController extends Controller
         if ($isDraft) {
             $validatedIsDraft = filter_var($isDraft, FILTER_VALIDATE_BOOLEAN);
             $query = $query->where('is_draft', $validatedIsDraft);
-
-            // save to cache
-            $cacheKey = $validatedIsDraft
-                ? $this->cacheDraftListArticlesKey
-                : $this->cachePublishListArticlesKey;
-
-            if (Redis::ping() === 'PONG') {
-                if (Redis::exists($cacheKey)) {
-                    $articles = Redis::get($cacheKey);
-                    $articles = json_decode($articles);
-                }
-            } else {
-                $articles = $query->get($selectedArticleColumns);
-
-                if (Redis::ping() === 'PONG') {
-                    Redis::set($cacheKey, json_encode($articles->toArray()));
-                }
-            }
+            $articles = $query->get($selectedArticleColumns);
 
             return $this->successfulResponseJSON(null, [
                 'articles_count' => count($articles),
@@ -70,21 +42,8 @@ class ArticleController extends Controller
 
     public function getOneArticle(Article $article) {
         if (auth()->user()->is_admin or ($article->user_id === auth()->user()->id)) {
-            if (Redis::ping() === 'PONG') {
-                if (Redis::exists($this->cacheOneArticleKey . $article->id)) {
-                    $article = Redis::get($this->cacheOneArticleKey . $article->id);
-                    $article = json_decode($article);
-                }
-            } else {
-                $article = Article::with(['category', 'user:id,name,username,email'])
-                    ->find($article->id);
-
-                if (Redis::ping() === 'PONG') {
-                    Redis::set(
-                        ($this->cacheOneArticleKey . $article->id), json_encode($article)
-                    );
-                }
-            }
+            $article = Article::with(['category', 'user:id,name,username,email'])
+                ->find($article->id);
             return $this->successfulResponseJSON(null, $article);
         }
         return $this->failedResponseJSON('Article not found', 404);
@@ -97,11 +56,6 @@ class ArticleController extends Controller
 
             if ($delete) {
                 DB::commit();
-
-                if (Redis::ping() === 'PONG') {
-                    Redis::flushall();
-                }
-
                 return $this->successfulResponseJSON('Article has been successfully deleted');
             }
 
@@ -266,11 +220,6 @@ class ArticleController extends Controller
 
         if ($update) {
             DB::commit();
-
-            if (Redis::ping() === 'PONG') {
-                Redis::flushall();
-            }
-
             return $this->successfulResponseJSON('Article has been successfully updated');
         }
 
@@ -287,11 +236,6 @@ class ArticleController extends Controller
 
         if ($create) {
             DB::commit();
-
-            if (Redis::ping() === 'PONG') {
-                Redis::flushall();
-            }
-
             return $this->successfulResponseJSON('Article has been successfully created');
         }
 
