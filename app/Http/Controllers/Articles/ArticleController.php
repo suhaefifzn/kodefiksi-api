@@ -46,12 +46,17 @@ class ArticleController extends Controller
                 ? $this->cacheDraftListArticlesKey
                 : $this->cachePublishListArticlesKey;
 
-            if (Redis::exists($cacheKey)) {
-                $articles = Redis::get($cacheKey);
-                $articles = json_decode($articles);
+            if (Redis::ping() === 'PONG') {
+                if (Redis::exists($cacheKey)) {
+                    $articles = Redis::get($cacheKey);
+                    $articles = json_decode($articles);
+                }
             } else {
                 $articles = $query->get($selectedArticleColumns);
-                Redis::set($cacheKey, json_encode($articles->toArray()));
+
+                if (Redis::ping() === 'PONG') {
+                    Redis::set($cacheKey, json_encode($articles->toArray()));
+                }
             }
 
             return $this->successfulResponseJSON(null, [
@@ -65,22 +70,23 @@ class ArticleController extends Controller
 
     public function getOneArticle(Article $article) {
         if (auth()->user()->is_admin or ($article->user_id === auth()->user()->id)) {
-            if (Redis::exists($this->cacheOneArticleKey . $article->id)) {
-                // get from cache
-                $article = Redis::get($this->cacheOneArticleKey . $article->id);
-                $article = json_decode($article);
+            if (Redis::ping() === 'PONG') {
+                if (Redis::exists($this->cacheOneArticleKey . $article->id)) {
+                    $article = Redis::get($this->cacheOneArticleKey . $article->id);
+                    $article = json_decode($article);
+                }
             } else {
                 $article = Article::with(['category', 'user:id,name,username,email'])
                     ->find($article->id);
 
-                // save to cache
-                Redis::set(
-                    ($this->cacheOneArticleKey . $article->id), json_encode($article)
-                );
+                if (Redis::ping() === 'PONG') {
+                    Redis::set(
+                        ($this->cacheOneArticleKey . $article->id), json_encode($article)
+                    );
+                }
             }
             return $this->successfulResponseJSON(null, $article);
         }
-
         return $this->failedResponseJSON('Article not found', 404);
     }
 
@@ -92,8 +98,10 @@ class ArticleController extends Controller
             if ($delete) {
                 DB::commit();
 
-                // delete from cache
-                Redis::flushall();
+                if (Redis::ping() === 'PONG') {
+                    Redis::flushall();
+                }
+
                 return $this->successfulResponseJSON('Article has been successfully deleted');
             }
 
@@ -258,7 +266,11 @@ class ArticleController extends Controller
 
         if ($update) {
             DB::commit();
-            Redis::flushall();
+
+            if (Redis::ping() === 'PONG') {
+                Redis::flushall();
+            }
+
             return $this->successfulResponseJSON('Article has been successfully updated');
         }
 
@@ -275,7 +287,11 @@ class ArticleController extends Controller
 
         if ($create) {
             DB::commit();
-            Redis::flushall();
+
+            if (Redis::ping() === 'PONG') {
+                Redis::flushall();
+            }
+
             return $this->successfulResponseJSON('Article has been successfully created');
         }
 
