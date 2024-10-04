@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 
 // Models - tables
 use App\Models\User;
@@ -83,7 +83,8 @@ class UserController extends Controller
         return $this->failedResponseJSON('Password failed to change');
     }
 
-    public function updateImage(Request $request) {
+    public function updateImage(Request $request)
+    {
         $request->validate([
             'image' => 'required|file|image|mimes:png,jpg|max:1024'
         ]);
@@ -91,22 +92,28 @@ class UserController extends Controller
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $imageName = $image->hashName();
-            $image->storeAs('public/images/users',  $imageName);
+            $destinationPath = public_path('images/users');
+
+            if (!File::exists($destinationPath)) {
+                File::makeDirectory($destinationPath, 0755, true);
+            }
+
+            $image->move($destinationPath, $imageName);
+
             $data = [
-                'image' => 'storage/images/users/' . $imageName
+                'image' => 'images/users/' . $imageName
             ];
 
             DB::beginTransaction();
             $user = User::where('id', auth()->user()->id)->first();
-            $update = User::where('id', auth()->user()->id)
-                ->update($data);
+            $update = User::where('id', auth()->user()->id)->update($data);
 
             if ($update) {
                 if (!is_null($user['image'])) {
-                    $explodedPath = explode('/', $user['image']);
-                    unset($explodedPath[0]);
-                    $implodedPath = implode('/', (array_values($explodedPath)));
-                    Storage::delete('public/' . $implodedPath);
+                    $oldImagePath = public_path($user['image']);
+                    if (File::exists($oldImagePath)) {
+                        File::delete($oldImagePath);
+                    }
                 }
 
                 DB::commit();
@@ -119,6 +126,7 @@ class UserController extends Controller
         DB::rollBack();
         return $this->failedResponseJSON('Image failed to upload');
     }
+
 
     // * Admin
     public function getUsers() {
