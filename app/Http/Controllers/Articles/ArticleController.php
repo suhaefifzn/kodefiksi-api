@@ -224,9 +224,12 @@ class ArticleController extends Controller
         $requestData = $request->all();
         $requestData['category_id'] = (int) $request->category_id;
         $requestData['is_draft'] = $isDraft;
-        $requestData['excerpt'] = Str::excerpt(strip_tags($request->body));
+        $htmlEntityDecode = html_entity_decode($request->body);
+        $requestData['excerpt'] = Str::limit(strip_tags($htmlEntityDecode), 150);
+
         unset($requestData['img_thumbnail']);
         unset($requestData['_method']);
+
         return $requestData;
     }
 

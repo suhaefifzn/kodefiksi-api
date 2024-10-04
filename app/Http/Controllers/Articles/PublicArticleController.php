@@ -14,7 +14,7 @@ use App\Models\User;
 
 class PublicArticleController extends Controller
 {
-    private $selectedColumns = ['title', 'slug', 'img_thumbnail','created_at', 'category_id', 'user_id', 'excerpt'];
+    private $selectedColumns = ['title', 'slug', 'img_thumbnail','created_at', 'updated_at', 'category_id', 'user_id', 'excerpt'];
     private $withTables = ['category:id,name,slug', 'user:id,name,username'];
 
     public function getArticles(Request $request) {
@@ -51,13 +51,16 @@ class PublicArticleController extends Controller
 
                 // get related articles
                 $relatedArticles = Article::where('category_id', $article['category_id'])
+                    ->where('is_draft', false)
+                    ->whereNot('slug', $article['slug'])
                     ->orderBy('created_at', 'DESC')
                     ->limit(3)
                     ->get(['slug', 'title', 'img_thumbnail', 'excerpt']);
 
                 // get newest articles
                 $newestArticles = Article::orderBy('created_at', 'DESC')
-                    ->limit(5)
+                    ->where('is_draft', false)
+                    ->limit(3)
                     ->get(['slug', 'title', 'img_thumbnail', 'created_at']);
 
                 $article['related_articles'] = $relatedArticles;
@@ -69,9 +72,9 @@ class PublicArticleController extends Controller
                 // save to cache
                 $encodedArticle = json_encode($article);
                 Redis::set(parent::getKeyPublicOneArticle($article['slug']), $encodedArticle);
+            } else {
+                return $this->failedResponseJSON('Article was not found', 404);
             }
-
-            return $this->failedResponseJSON('Article was not found', 404);
         }
 
         return $this->successfulResponseJSON(null, $article);

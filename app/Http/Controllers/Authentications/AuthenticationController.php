@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Authentications;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-// use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthenticationController extends Controller
@@ -16,9 +16,20 @@ class AuthenticationController extends Controller
         ]);
 
         $credentials = $request->only('email', 'password');
+
+        // limit login attempts
+        $throttleKey = 'auth:attemps:' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            return $this->successfulResponseJSON('Too many login attempts. Please try again later in ' . $seconds . ' seconds', null, 429);
+        }
+
         $token = auth()->attempt($credentials);
 
         if ($token) {
+            RateLimiter::clear($throttleKey);
+
             $data = [
                 'token' => [
                     'access_token' => $token,
@@ -30,6 +41,7 @@ class AuthenticationController extends Controller
             return $this->successfulResponseJSON(null, $data, 201);
         }
 
+        RateLimiter::hit($throttleKey);
         return $this->failedResponseJSON('Oops, your credentials does not match our records', 404);
     }
 

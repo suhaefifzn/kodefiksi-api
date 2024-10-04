@@ -126,4 +126,8 @@ return [
     'client' => [
         'token' => env('CLIENT_TOKEN', '')
     ],
+
+    'my_config' => [
+        'user_password' => env('FIRST_USER_PASSWORD', '')
+    ]
 ];

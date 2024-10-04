@@ -20,16 +20,15 @@ class ArticleFactory extends Factory
     {
         // random user
         $users = User::all()->pluck('id')->flatten()->toArray();
-        unset($users[count($users) - 1]); // delete last user id
         $randomUser = array_rand($users);
 
         // wrapp paragraps with tag p
-        $paragraphs = fake()->paragraphs(rand(6, 10));
+        $paragraphs = fake()->paragraphs(rand(10, 20));
         $wrappedParagraphs = array_map(function ($paragraph, $index) {
             $image = '';
 
             if ($index === 2) {
-                $image = '<img src="https://picsum.photos/1280/720" alt="Random Image"/>';
+                $image = '<figure><img src="https://picsum.photos/1280/720" alt="Random Image" class="img-fluid"/></figure>';
             }
 
             return "<p>$paragraph</p>$image";
@@ -47,9 +46,9 @@ class ArticleFactory extends Factory
         return [
             'user_id' => $users[$randomUser],
             'category_id' => $categories[$randomCategory],
-            'title' => fake()->words(5, true),
+            'title' => fake()->words(10, true),
             'img_thumbnail' => 'https://picsum.photos/1280/720',
-            'excerpt' => Str::excerpt(strip_tags($implodedParagraphs)),
+            'excerpt' => Str::limit(strip_tags($implodedParagraphs), 150),
             'body' => $implodedParagraphs,
             'is_draft' => $isDrafts[$randomIsDraft]
         ];
