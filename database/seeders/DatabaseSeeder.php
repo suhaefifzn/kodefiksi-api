@@ -28,6 +28,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(CategorySeeder::class);
-        // Article::factory(100)->create();
+        Article::factory(200)->create();
     }
 }

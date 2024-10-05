@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Articles;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 // ? Models - tables
@@ -37,35 +38,43 @@ class PublicArticleController extends Controller
     }
 
     public function getOneArticle(Article $article) {
-        $article = $article->where('slug', $article->slug)
-            ->where('is_draft', false)
-            ->with(['category:id,name,slug', 'user:id,name,username'])
-            ->first();
-
-        if ($article) {
-            $article = $article->toArray();
-
-            // get related articles
-            $relatedArticles = Article::where('category_id', $article['category_id'])
-                ->where('is_draft', false)
-                ->whereNot('slug', $article['slug'])
-                ->orderBy('created_at', 'DESC')
-                ->limit(3)
-                ->get(['slug', 'title', 'img_thumbnail', 'excerpt']);
-
-            // get newest articles
-            $newestArticles = Article::orderBy('created_at', 'DESC')
-                ->where('is_draft', false)
-                ->limit(3)
-                ->get(['slug', 'title', 'img_thumbnail', 'created_at']);
-
-            $article['related_articles'] = $relatedArticles;
-            $article['newest_articles'] = $newestArticles;
-
-            unset($article['category_id']);
-            unset($article['user_id']);
+        if (Redis::exists(parent::getKeyPublicOneArticle($article->slug))) {
+            $article = json_decode(Redis::get(parent::getKeyPublicOneArticle($article->slug)), true);
         } else {
-            return $this->failedResponseJSON('Article was not found', 404);
+            $article = $article->where('slug', $article->slug)
+                ->where('is_draft', false)
+                ->with(['category:id,name,slug', 'user:id,name,username'])
+                ->first();
+
+            if ($article) {
+                $article = $article->toArray();
+
+                // get related articles
+                $relatedArticles = Article::where('category_id', $article['category_id'])
+                    ->where('is_draft', false)
+                    ->whereNot('slug', $article['slug'])
+                    ->orderBy('created_at', 'DESC')
+                    ->limit(3)
+                    ->get(['slug', 'title', 'img_thumbnail', 'excerpt']);
+
+                // get newest articles
+                $newestArticles = Article::orderBy('created_at', 'DESC')
+                    ->where('is_draft', false)
+                    ->limit(3)
+                    ->get(['slug', 'title', 'img_thumbnail', 'created_at']);
+
+                $article['related_articles'] = $relatedArticles;
+                $article['newest_articles'] = $newestArticles;
+
+                unset($article['category_id']);
+                unset($article['user_id']);
+
+                // save to cache
+                $encodedArticle = json_encode($article);
+                Redis::set(parent::getKeyPublicOneArticle($article['slug']), $encodedArticle);
+            } else {
+                return $this->failedResponseJSON('Article was not found', 404);
+            }
         }
 
         return $this->successfulResponseJSON(null, $article);
@@ -75,18 +84,25 @@ class PublicArticleController extends Controller
         $validatedValueQueryPage = filter_var($pageNumber, FILTER_VALIDATE_INT);
 
         if ($validatedValueQueryPage) {
-            $selectedColumns = $this->selectedColumns;
-            array_push($selectedColumns, 'body');
+            if (Redis::exists(parent::getKeyPublicAllArticles())) {
+                $articles = json_decode(Redis::get(parent::getKeyPublicAllArticles()), true);
+            } else {
+                $selectedColumns = $this->selectedColumns;
+                array_push($selectedColumns, 'body');
 
-            $query = Article::where('is_draft', false)
-                ->orderBy('created_at', 'DESC')
-                ->select($selectedColumns)
-                ->with($this->withTables);
+                $query = Article::where('is_draft', false)
+                    ->orderBy('created_at', 'DESC')
+                    ->select($selectedColumns)
+                    ->with($this->withTables);
 
-            $articles = $query->orwhere('title', 'like', "%{$searchTerm}%")
-                ->orWhere('body', 'like', "%{$searchTerm}%")
-                ->get()
-                ->toArray();
+                $articles = $query->orwhere('title', 'like', "%{$searchTerm}%")
+                    ->orWhere('body', 'like', "%{$searchTerm}%")
+                    ->get()
+                    ->toArray();
+
+                // save to cache
+                Redis::set(parent::getKeyPublicAllArticles(), json_encode($articles));
+            }
 
             $articles = array_map(function($article) {
                 unset($article['category_id'], $article['user_id'], $article['body']);
@@ -117,13 +133,19 @@ class PublicArticleController extends Controller
         $validatedValueQueryPage = filter_var($pageNumber, FILTER_VALIDATE_INT);
 
         if ($validatedValueQueryPage) {
-            $articles = Article::orderBy('created_at', 'DESC')
-                ->select($this->selectedColumns)
-                ->with($this->withTables)
-                ->where('is_draft', false)
-                ->paginate(10);
-            $response = self::setFormatResponse($articles);
+            if (Redis::exists(parent::getKeyPublicArticlesPerPagination($validatedValueQueryPage))) {
+                $response = json_decode(Redis::get(parent::getKeyPublicArticlesPerPagination($validatedValueQueryPage)));
+            } else {
+                $articles = Article::orderBy('created_at', 'DESC')
+                    ->select($this->selectedColumns)
+                    ->with($this->withTables)
+                    ->where('is_draft', false)
+                    ->paginate(10);
 
+                    $response = self::setFormatResponse($articles);
+                    $encodedArticles = json_encode($response);
+                Redis::set(parent::getKeyPublicArticlesPerPagination($validatedValueQueryPage), $encodedArticles);
+            }
             return parent::successfulResponseJSON(null, $response);
         }
         return parent::failedResponseJSON('The value for the page query in the URL was not valid', 400);
@@ -135,16 +157,27 @@ class PublicArticleController extends Controller
 
         if ($categoryExists) {
             if ($validatedValueQueryPage) {
-                $articles = Article::where('category_id', $categoryExists['id'])
-                    ->orderBy('created_at', 'DESC')
-                    ->select($this->selectedColumns)
-                    ->with($this->withTables)
-                    ->where('is_draft', false)
-                    ->paginate(10);
+                if (Redis::exists(
+                    parent::getKeyPublicArticlesPerCategory($categoryExists['slug'], $validatedValueQueryPage)
+                    )) {
+                        $response = json_decode(Redis::get(parent::getKeyPublicArticlesPerCategory(
+                            $categoryExists['slug'], $validatedValueQueryPage
+                        )));
+                    } else {
+                        $articles = Article::where('category_id', $categoryExists['id'])
+                            ->orderBy('created_at', 'DESC')
+                            ->select($this->selectedColumns)
+                            ->with($this->withTables)
+                            ->where('is_draft', false)
+                            ->paginate(10);
 
-                $response = self::setFormatResponse($articles);
-
-                return parent::successfulResponseJSON(null, $response);
+                        $response = self::setFormatResponse($articles);
+                        $encodedArticles = json_encode($response);
+                        Redis::set(
+                            parent::getKeyPublicArticlesPerCategory($categoryExists['slug'], $pageNumber), $encodedArticles
+                        );
+                    }
+                    return parent::successfulResponseJSON(null, $response);
             }
             return parent::failedResponseJSON('The value for the page query in the URL was not valid', 400);
         }
@@ -157,15 +190,27 @@ class PublicArticleController extends Controller
 
         if ($userExists) {
             if ($validatedValueQueryPage) {
-                $articles = Article::where('user_id', $userExists['id'])
-                    ->orderBy('created_at', 'DESC')
-                    ->select($this->selectedColumns)
-                    ->with($this->withTables)
-                    ->where('is_draft', false)
-                    ->paginate(10);
+                if (Redis::exists(
+                    parent::getKeyPublicArticlesPerCategory($userExists['username'], $validatedValueQueryPage)
+                    )) {
+                        $response = json_decode(Redis::get(parent::getKeyPublicArticlesPerAuthor(
+                            $userExists['username'], $validatedValueQueryPage
+                        )));
+                    } else {
+                        $articles = Article::where('user_id', $userExists['id'])
+                            ->orderBy('created_at', 'DESC')
+                            ->select($this->selectedColumns)
+                            ->with($this->withTables)
+                            ->where('is_draft', false)
+                            ->paginate(10);
 
-                $response = self::setFormatResponse($articles);
-                return parent::successfulResponseJSON(null, $response);
+                        $response = self::setFormatResponse($articles);
+                        $encodedArticles = json_encode($response);
+                        Redis::set(
+                            parent::getKeyPublicArticlesPerAuthor($userExists['slug'], $pageNumber), $encodedArticles
+                        );
+                    }
+                    return parent::successfulResponseJSON(null, $response);
             }
             return parent::failedResponseJSON('The value for the page query in the URL was not valid', 400);
         }

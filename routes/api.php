@@ -3,6 +3,7 @@
 use App\Http\Controllers\Articles\ArticleController;
 use App\Http\Controllers\Articles\PublicArticleController;
 use App\Http\Controllers\Authentications\AuthenticationController;
+use App\Http\Controllers\Caches\CacheController;
 use App\Http\Controllers\Categories\CategoryController;
 use App\Http\Controllers\Users\UserController;
 use Illuminate\Support\Facades\Route;
@@ -87,5 +88,13 @@ Route::controller(ArticleController::class)
                 Route::get('/{article:slug}', 'getOneArticle');
                 Route::put('/{article:slug}', 'editArticle');
                 Route::delete('/{article:slug}', 'deleteArticle');
+            });
+
+        // Cache Control
+        Route::controller(CacheController::class)
+            ->prefix('cache')
+            ->middleware('auth.admin')
+            ->group(function () {
+                Route::get('/flush', 'flushAll');
             });
     });
