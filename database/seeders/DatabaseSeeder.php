@@ -19,15 +19,15 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Suhaefi',
-            'username' => 'suhaefi21',
-            'email' => 'suhaefi21@gmail.com',
-            'password' => Hash::make(config('app.my_config.user_password')),
-            'is_admin' => true
-        ]);
+        // User::factory()->create([
+        //     'name' => 'Suhaefi',
+        //     'username' => 'suhaefi21',
+        //     'email' => 'suhaefi21@gmail.com',
+        //     'password' => Hash::make(config('app.my_config.user_password')),
+        //     'is_admin' => true
+        // ]);
 
-        $this->call(CategorySeeder::class);
-        Article::factory(200)->create();
+        // $this->call(CategorySeeder::class);
+        // Article::factory(200)->create();
     }
 }

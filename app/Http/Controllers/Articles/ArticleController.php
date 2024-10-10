@@ -165,8 +165,7 @@ class ArticleController extends Controller
      * because, on the front end, a list will be created for each
      * successfully uploaded image (in jquery data table)
      */
-    public function addImage(Request $request)
-    {
+    public function addImage(Request $request) {
         $request->validate([
             'image' => 'required|file|mimes:png,jpg|max:2048'
         ]);
@@ -283,8 +282,7 @@ class ArticleController extends Controller
         return $this->failedResponseJSON('Article failed to create');
     }
 
-    private function storeImageThumbnail($newImgThumbnail, string $pathOldImgThumbnail = null)
-    {
+    private function storeImageThumbnail($newImgThumbnail, string $pathOldImgThumbnail = null) {
         if (!is_null($pathOldImgThumbnail)) {
             $oldImagePath = public_path($pathOldImgThumbnail);
             if (File::exists($oldImagePath)) {
@@ -302,7 +300,8 @@ class ArticleController extends Controller
         }
 
         $image->move($destinationPath, $imageName);
+        $imagePath = config('app.url') . '/images/articles/' . $imageName;
 
-        return 'images/articles/' . $imageName;
+        return $imagePath;
     }
 }
