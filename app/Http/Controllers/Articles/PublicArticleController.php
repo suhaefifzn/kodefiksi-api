@@ -16,6 +16,7 @@ class PublicArticleController extends Controller
 {
     private $selectedColumns = ['title', 'slug', 'img_thumbnail','created_at', 'updated_at', 'category_id', 'user_id', 'excerpt'];
     private $withTables = ['category:id,name,slug', 'user:id,name,username'];
+    private $totalItemsPerPage = 9;
 
     public function getArticles(Request $request) {
         if ($request->has('category') and $request->has('page')) {
@@ -111,7 +112,7 @@ class PublicArticleController extends Controller
 
             // pagination
             $currentPage = LengthAwarePaginator::resolveCurrentPage();
-            $perPage = 10;
+            $perPage = $this->totalItemsPerPage;
             $collectionArticles = collect($articles);
 
             $articlesPaginated = new LengthAwarePaginator(
@@ -140,7 +141,7 @@ class PublicArticleController extends Controller
                     ->select($this->selectedColumns)
                     ->with($this->withTables)
                     ->where('is_draft', false)
-                    ->paginate(10);
+                    ->paginate($this->totalItemsPerPage);
 
                     $response = self::setFormatResponse($articles);
                     $encodedArticles = json_encode($response);
@@ -169,7 +170,7 @@ class PublicArticleController extends Controller
                             ->select($this->selectedColumns)
                             ->with($this->withTables)
                             ->where('is_draft', false)
-                            ->paginate(10);
+                            ->paginate($this->totalItemsPerPage);
 
                         $response = self::setFormatResponse($articles);
                         $encodedArticles = json_encode($response);
@@ -202,7 +203,7 @@ class PublicArticleController extends Controller
                             ->select($this->selectedColumns)
                             ->with($this->withTables)
                             ->where('is_draft', false)
-                            ->paginate(10);
+                            ->paginate($this->totalItemsPerPage);
 
                         $response = self::setFormatResponse($articles);
                         $encodedArticles = json_encode($response);
