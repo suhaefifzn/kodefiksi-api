@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Validator;
 
 // ? Models - tables
 use App\Models\Article;
@@ -19,16 +20,30 @@ class PublicArticleController extends Controller
     private $totalItemsPerPage = 9;
 
     public function getArticles(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'search' => 'string|min:3|max:100|regex:/^[a-zA-Z0-9\s]+$/',
+            'category' => 'string|min:3|max:100|regex:/^[a-zA-Z0-9\s]+$/',
+            'username' => 'string|min:3|max:100|regex:/^[a-zA-Z0-9\s]+$/',
+            'page' => 'integer|min:1|max:100|regex:/^[a-zA-Z0-9\s]+$/',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->failedResponseJSON('Not a valid value', 400);
+        }
+
         if ($request->has('category') and $request->has('page')) {
-            return self::getByCategory($request->query('category'), $request->query('page'));
+            $category = htmlspecialchars($request->query('category'));
+            return self::getByCategory($category, $request->query('page'));
         }
 
         if ($request->has('username') and $request->has('page')) {
+            $username = htmlspecialchars($request->query('username'));
             return self::getByAuthor($request->query('username'), $request->query('page'));
         }
 
         if ($request->has('search') and $request->has('page')) {
-            return self::getBySearch($request->query('search'), $request->query('page'));
+            $search = htmlspecialchars($request->query('search'));
+            return self::getBySearch($search, $request->query('page'));
         }
 
         if ($request->has('page')) {
@@ -85,25 +100,23 @@ class PublicArticleController extends Controller
         $validatedValueQueryPage = filter_var($pageNumber, FILTER_VALIDATE_INT);
 
         if ($validatedValueQueryPage) {
-            if (Redis::exists(parent::getKeyPublicAllArticles())) {
-                $articles = json_decode(Redis::get(parent::getKeyPublicAllArticles()), true);
-            } else {
-                $selectedColumns = $this->selectedColumns;
-                array_push($selectedColumns, 'body');
+            $searchTerm = strtolower($searchTerm);
+            $selectedColumns = $this->selectedColumns;
+            array_push($selectedColumns, 'body');
 
-                $query = Article::where('is_draft', false)
-                    ->orderBy('created_at', 'DESC')
-                    ->select($selectedColumns)
-                    ->with($this->withTables);
+            $query = Article::where('is_draft', false)
+                ->orderBy('created_at', 'DESC')
+                ->select($selectedColumns)
+                ->with($this->withTables);
 
-                $articles = $query->orwhere('title', 'like', "%{$searchTerm}%")
-                    ->orWhere('body', 'like', "%{$searchTerm}%")
-                    ->get()
-                    ->toArray();
-
-                // save to cache
-                Redis::set(parent::getKeyPublicAllArticles(), json_encode($articles));
+            if (!empty($searchTerm)) {
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->whereRaw('LOWER(title) LIKE ?', ["%{$searchTerm}%"])
+                        ->orWhereRaw('LOWER(body) LIKE ?', ["%{$searchTerm}%"]);
+                });
             }
+
+            $articles = $query->get()->toArray();
 
             $articles = array_map(function($article) {
                 unset($article['category_id'], $article['user_id'], $article['body']);

@@ -109,7 +109,7 @@ class ArticleController extends Controller
             'category_id' => 'required|exists:categories,id',
             'title' => 'required|string|min:10|max:255',
             'slug' => 'nullable|string|unique:articles,slug',
-            'img_thumbnail' => 'required|file|mimes:png,jpg|max:2048',
+            'img_thumbnail' => 'required|file|mimes:png,jpg,webp|max:2048',
             'is_draft' => ['required', 'string', new TextToBooleanRule()],
             'body' => ['required', 'string', new MinWordsRule(350)]
         ]);
@@ -123,7 +123,7 @@ class ArticleController extends Controller
         $request->validate([
             'category_id' => 'required|exists:categories,id',
             'title' => 'required|string|min:10|max:255',
-            'img_thumbnail' => 'nullable|file|mimes:png,jpg|max:2048',
+            'img_thumbnail' => 'nullable|file|mimes:png,jpg,webp|max:2048',
             'is_draft' => ['required', 'string', new TextToBooleanRule()],
             'body' => ['required', 'string', new MinWordsRule(350)]
         ]);
