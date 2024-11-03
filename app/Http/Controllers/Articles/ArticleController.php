@@ -167,7 +167,7 @@ class ArticleController extends Controller
      */
     public function addImage(Request $request) {
         $request->validate([
-            'image' => 'required|file|mimes:png,jpg|max:2048'
+            'image' => 'required|file|mimes:png,jpg,webp|max:2048'
         ]);
         $image = $request->file('image');
         $imageName = $image->hashName();
