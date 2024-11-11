@@ -111,6 +111,7 @@ class ArticleController extends Controller
             'slug' => 'nullable|string|unique:articles,slug',
             'img_thumbnail' => 'required|file|mimes:png,jpg,webp|max:2048',
             'is_draft' => ['required', 'string', new TextToBooleanRule()],
+            'excerpt' => 'required|string|min:140|max:200',
             'body' => ['required', 'string', new MinWordsRule(350)]
         ]);
 
@@ -125,6 +126,7 @@ class ArticleController extends Controller
             'title' => 'required|string|min:10|max:255',
             'img_thumbnail' => 'nullable|file|mimes:png,jpg,webp|max:2048',
             'is_draft' => ['required', 'string', new TextToBooleanRule()],
+            'excerpt' => 'required|string|min:140|max:200',
             'body' => ['required', 'string', new MinWordsRule(350)]
         ]);
 
@@ -232,8 +234,6 @@ class ArticleController extends Controller
         $requestData = $request->all();
         $requestData['category_id'] = (int) $request->category_id;
         $requestData['is_draft'] = $isDraft;
-        $htmlEntityDecode = html_entity_decode($request->body);
-        $requestData['excerpt'] = Str::limit(strip_tags($htmlEntityDecode), 150);
 
         unset($requestData['img_thumbnail']);
         unset($requestData['_method']);
