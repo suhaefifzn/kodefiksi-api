@@ -100,46 +100,66 @@ class PublicArticleController extends Controller
         $validatedValueQueryPage = filter_var($pageNumber, FILTER_VALIDATE_INT);
 
         if ($validatedValueQueryPage) {
-            $searchTerm = strtolower($searchTerm);
-            $selectedColumns = $this->selectedColumns;
-            array_push($selectedColumns, 'body');
+            // Check and get from cache first
+            if (Redis::exists(parent::getKeyPublicAllArticles())) {
+                $articles = collect(json_decode(Redis::get(parent::getKeyPublicAllArticles()), true));
 
-            $query = Article::where('is_draft', false)
-                ->orderBy('created_at', 'DESC')
-                ->select($selectedColumns)
-                ->with($this->withTables);
-
-            if (!empty($searchTerm)) {
-                $query->where(function ($q) use ($searchTerm) {
-                    $q->whereRaw('LOWER(title) LIKE ?', ["%{$searchTerm}%"])
-                        ->orWhereRaw('LOWER(body) LIKE ?', ["%{$searchTerm}%"]);
+                // Filter articles based on the search term, only by title
+                $filteredArticles = $articles->filter(function ($article) use ($searchTerm) {
+                    return str_contains(strtolower($article['title']), strtolower($searchTerm));
                 });
+
+                // Pagination
+                $currentPage = LengthAwarePaginator::resolveCurrentPage();
+                $perPage = $this->totalItemsPerPage;
+                $articlesPaginated = new LengthAwarePaginator(
+                    $filteredArticles->forPage($currentPage, $perPage)->values(),
+                    $filteredArticles->count(),
+                    $perPage,
+                    $currentPage,
+                    ['path' => LengthAwarePaginator::resolveCurrentPath()]
+                );
+
+                $formattedResponse = self::setFormatResponse($articlesPaginated);
+
+                return parent::successfulResponseJSON(null, $formattedResponse);
+            } else {
+                $searchTerm = strtolower($searchTerm);
+                $query = Article::where('is_draft', false)
+                    ->orderBy('created_at', 'DESC')
+                    ->select($this->selectedColumns)
+                    ->with($this->withTables);
+
+                // get all, then save to cache
+                Redis::set(parent::getKeyPublicAllArticles(), json_encode($query->get()));
+
+                if (!empty($searchTerm)) {
+                    $query->where(function ($q) use ($searchTerm) {
+                        $q->whereRaw('LOWER(title) LIKE ?', ["%{$searchTerm}%"]);
+                    });
+                }
+
+                $articles = $query->get();
+
+                // pagination
+                $currentPage = LengthAwarePaginator::resolveCurrentPage();
+                $perPage = $this->totalItemsPerPage;
+                $collectionArticles = collect($articles);
+
+                $articlesPaginated = new LengthAwarePaginator(
+                    $collectionArticles->forPage($currentPage, $perPage)->values(),
+                    $collectionArticles->count(),
+                    $perPage,
+                    $currentPage,
+                    ['path' => LengthAwarePaginator::resolveCurrentPath()]
+                );
+
+                $formattedResponse = self::setFormatResponse($articlesPaginated);
+
+                return $this->successfulResponseJSON(null, $formattedResponse);
             }
-
-            $articles = $query->get()->toArray();
-
-            $articles = array_map(function($article) {
-                unset($article['category_id'], $article['user_id'], $article['body']);
-                return $article;
-            }, $articles);
-
-            // pagination
-            $currentPage = LengthAwarePaginator::resolveCurrentPage();
-            $perPage = $this->totalItemsPerPage;
-            $collectionArticles = collect($articles);
-
-            $articlesPaginated = new LengthAwarePaginator(
-                $collectionArticles->forPage($currentPage, $perPage)->values(),
-                $collectionArticles->count(),
-                $perPage,
-                $currentPage,
-                ['path' => LengthAwarePaginator::resolveCurrentPath()]
-            );
-
-            $formattedResponse = self::setFormatResponse($articlesPaginated);
-
-            return $this->successfulResponseJSON(null, $formattedResponse);
         }
+
         return parent::failedResponseJSON('The value for the page query in the URL was not valid', 400);
     }
 
@@ -156,8 +176,8 @@ class PublicArticleController extends Controller
                     ->where('is_draft', false)
                     ->paginate($this->totalItemsPerPage);
 
-                    $response = self::setFormatResponse($articles);
-                    $encodedArticles = json_encode($response);
+                $response = self::setFormatResponse($articles);
+                $encodedArticles = json_encode($response);
                 Redis::set(parent::getKeyPublicArticlesPerPagination($validatedValueQueryPage), $encodedArticles);
             }
             return parent::successfulResponseJSON(null, $response);

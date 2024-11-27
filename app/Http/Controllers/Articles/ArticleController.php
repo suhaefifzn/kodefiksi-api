@@ -193,7 +193,7 @@ class ArticleController extends Controller
 
         if ($create) {
             DB::commit();
-            return $this->successfulResponseJSON(null, $responseData);
+            return $this->successfulResponseJSON('Image has been successfully uploaded', $responseData);
         }
 
         DB::rollBack();
@@ -275,6 +275,16 @@ class ArticleController extends Controller
         if ($create) {
             DB::commit();
             Redis::flushall();
+
+            // get all articles and save to cache for search features
+            $articles = Article::orderBy('created_at', 'DESC')
+                ->where('is_draft', false)
+                ->select(['title', 'slug', 'img_thumbnail','created_at', 'updated_at', 'category_id', 'user_id', 'excerpt'])
+                ->with(['category:id,name,slug', 'user:id,name,username'])
+                ->get();
+            $encodedArticles = json_encode($articles);
+            Redis::set(parent::getKeyPublicAllArticles(), $encodedArticles);
+
             return $this->successfulResponseJSON('Article has been successfully created');
         }
 
