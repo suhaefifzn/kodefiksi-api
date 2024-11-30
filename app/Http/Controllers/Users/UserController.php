@@ -92,7 +92,11 @@ class UserController extends Controller
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $imageName = $image->hashName();
-            $destinationPath = public_path('images/users');
+            $destinationPath = realpath(__DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/users/');
+
+            if ($destinationPath === false) {
+                $destinationPath = __DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/users/';
+            }
 
             if (!File::exists($destinationPath)) {
                 File::makeDirectory($destinationPath, 0755, true);

@@ -173,7 +173,11 @@ class ArticleController extends Controller
         ]);
         $image = $request->file('image');
         $imageName = $image->hashName();
-        $destinationPath = public_path('images/articles');
+        $destinationPath = realpath(__DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/articles/');
+
+        if ($destinationPath === false) {
+            $destinationPath = __DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/articles/';
+        }
 
         if (!File::exists($destinationPath)) {
             File::makeDirectory($destinationPath, 0755, true);
@@ -294,22 +298,31 @@ class ArticleController extends Controller
 
     private function storeImageThumbnail($newImgThumbnail, string $pathOldImgThumbnail = null) {
         if (!is_null($pathOldImgThumbnail)) {
-            $oldImagePath = public_path($pathOldImgThumbnail);
+            $explodedPath = explode('/', $pathOldImgThumbnail);
+            $fileImage = end($explodedPath); // filename at last index
+            $oldImagePath = __DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/articles/' . $fileImage;
+
             if (File::exists($oldImagePath)) {
                 File::delete($oldImagePath);
             }
         }
 
+        // save
         $image = $newImgThumbnail;
         $imageName = $image->hashName();
+        $destinationPath = realpath(__DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/articles/');
 
-        $destinationPath = public_path('images/articles');
+        if ($destinationPath === false) {
+            $destinationPath = __DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/articles/';
+        }
 
         if (!File::exists($destinationPath)) {
             File::makeDirectory($destinationPath, 0755, true);
         }
 
         $image->move($destinationPath, $imageName);
+
+        // get path
         $imagePath = config('app.url') . '/images/articles/' . $imageName;
 
         return $imagePath;
