@@ -173,10 +173,10 @@ class ArticleController extends Controller
         ]);
         $image = $request->file('image');
         $imageName = $image->hashName();
-        $destinationPath = realpath(__DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/articles/');
+        $destinationPath = realpath(__DIR__ . '/../../../../../../public_html/api.kodefiksi.com/images/articles/');
 
         if ($destinationPath === false) {
-            $destinationPath = __DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/articles/';
+            $destinationPath = __DIR__ . '/../../../../../../public_html/api.kodefiksi.com/images/articles/';
         }
 
         if (!File::exists($destinationPath)) {
@@ -300,7 +300,7 @@ class ArticleController extends Controller
         if (!is_null($pathOldImgThumbnail)) {
             $explodedPath = explode('/', $pathOldImgThumbnail);
             $fileImage = end($explodedPath); // filename at last index
-            $oldImagePath = __DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/articles/' . $fileImage;
+            $oldImagePath = __DIR__ . '/../../../../../../public_html/api.kodefiksi.com/images/articles/' . $fileImage;
 
             if (File::exists($oldImagePath)) {
                 File::delete($oldImagePath);
@@ -310,10 +310,10 @@ class ArticleController extends Controller
         // save
         $image = $newImgThumbnail;
         $imageName = $image->hashName();
-        $destinationPath = realpath(__DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/articles/');
+        $destinationPath = realpath(__DIR__ . '/../../../../../../public_html/api.kodefiksi.com/images/articles/');
 
         if ($destinationPath === false) {
-            $destinationPath = __DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/articles/';
+            $destinationPath = __DIR__ . '/../../../../../../public_html/api.kodefiksi.com/images/articles/';
         }
 
         if (!File::exists($destinationPath)) {
