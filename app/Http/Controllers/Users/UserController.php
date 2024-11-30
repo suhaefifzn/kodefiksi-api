@@ -90,6 +90,17 @@ class UserController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
+            // delete old image
+            if (!is_null(auth()->user()->image)) {
+                $explodedPath = explode('/', auth()->user()->image);
+                $fileImage = end($explodedPath);
+                $oldImagePath = __DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/users/' . $fileImage;
+
+                if (File::exists($oldImagePath)) {
+                    File::delete($oldImagePath);
+                }
+            }
+
             $image = $request->file('image');
             $imageName = $image->hashName();
             $destinationPath = realpath(__DIR__ . '/../../../../../../public_html/dev-api.kodefiksi/images/users/');
