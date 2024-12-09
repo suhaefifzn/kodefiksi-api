@@ -32,9 +32,7 @@ class PublicArticleController extends Controller
                 $query->where('is_draft', false)
                     ->whereNot('slug', $latestArticle->slug)
                     ->select($this->selectedColumns)
-                    ->with(['user' => function ($query) {
-                        $query->select('username');
-                    }])->latest()->take(3);
+                    ->with('user')->latest()->take(3);
             }])->get();
 
             $articles = [
