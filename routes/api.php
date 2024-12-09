@@ -75,6 +75,7 @@ Route::middleware('throttle:120,1')
                     ->prefix('public')
                     ->group(function () {
                         Route::get('', 'getArticles');
+                        Route::get('/home', 'getHomeArticles');
                         Route::get('/{article:slug}', 'getOneArticle');
                     });
 

@@ -19,6 +19,37 @@ class PublicArticleController extends Controller
     private $withTables = ['category:id,name,slug', 'user:id,name,username'];
     private $totalItemsPerPage = 9;
 
+    public function getHomeArticles() {
+        if (Redis::exists(parent::getKeyPublicHomeArticles())) {
+            $articles = json_decode(Redis::get(parent::getKeyPublicHomeArticles()), true);
+        } else {
+            $categories = Category::with(['articles' => function ($query) {
+                $query->where('is_draft', false)
+                    ->select($this->selectedColumns)
+                    ->with(['user' => function ($query) {
+                        $query->select('username');
+                    }])->latest()->take(3);
+            }])->get();
+            $latestArticle = Article::where('is_draft', false)
+                ->select($this->selectedColumns)
+                ->with($this->withTables)
+                ->latest()->first();
+            $articles = [
+                'articles' => [
+                    'latest' => $latestArticle,
+                    'per_categories' => $categories
+                ]
+            ];
+
+            $encodedArticles = json_encode($articles);
+
+            // save to cache
+            Redis::set(parent::getKeyPublicHomeArticles(), $encodedArticles);
+        }
+
+        return $this->successfulResponseJSON(null, $articles);
+    }
+
     public function getArticles(Request $request) {
         $validator = Validator::make($request->all(), [
             'search' => 'string|min:3|max:100|regex:/^[a-zA-Z0-9\s]+$/',

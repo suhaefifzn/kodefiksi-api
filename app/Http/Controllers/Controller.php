@@ -15,6 +15,7 @@ abstract class Controller
     private $publicCacheArticlesPerAuthorKey = 'public:articles:author:';
     private $publicCacheOneArticleKey = 'public:article:';
     private $publicCacheAllArticlesKey = 'public:articles:all';
+    private $publicCacheHomeArticlesKey = 'public:articles:home';
 
     protected function successfulResponseJSON($message = null, $data = null, $code = 200) {
         $response = [
@@ -65,6 +66,10 @@ abstract class Controller
 
     protected function getKeyPublicArticlesPerAuthor($username = '', $pageNumber = '') {
         return $this->publicCacheArticlesPerAuthorKey . $username . ':' . $pageNumber;
+    }
+
+    protected function getKeyPublicHomeArticles() {
+        return $this->publicCacheHomeArticlesKey;
     }
 
     protected function getKeyPublicAllArticles() {
