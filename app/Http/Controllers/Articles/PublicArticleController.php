@@ -23,17 +23,20 @@ class PublicArticleController extends Controller
         if (Redis::exists(parent::getKeyPublicHomeArticles())) {
             $articles = json_decode(Redis::get(parent::getKeyPublicHomeArticles()), true);
         } else {
-            $categories = Category::with(['articles' => function ($query) {
+            $latestArticle = Article::where('is_draft', false)
+                ->select($this->selectedColumns)
+                ->with($this->withTables)
+                ->latest()->first();
+
+            $categories = Category::with(['articles' => function ($query) use ($latestArticle) {
                 $query->where('is_draft', false)
+                    ->whereNot('slug', $latestArticle->slug)
                     ->select($this->selectedColumns)
                     ->with(['user' => function ($query) {
                         $query->select('username');
                     }])->latest()->take(3);
             }])->get();
-            $latestArticle = Article::where('is_draft', false)
-                ->select($this->selectedColumns)
-                ->with($this->withTables)
-                ->latest()->first();
+
             $articles = [
                 'articles' => [
                     'latest' => $latestArticle,
