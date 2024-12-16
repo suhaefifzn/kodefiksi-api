@@ -233,6 +233,17 @@ class ArticleController extends Controller
         return $this->successfulResponseJSON(null, $response);
     }
 
+    public function getSlugs() {
+        $slugs = Article::where('is_draft', 'false')
+            ->select('id', 'slug', 'updated_at')
+            ->orderBy('updated_at')
+            ->get();
+
+        return $this->successfulResponseJSON(null, [
+            'slugs' => $slugs
+        ]);
+    }
+
     private function setRequestData(mixed $request) {
         $isDraft = filter_var($request->is_draft, FILTER_VALIDATE_BOOLEAN);
         $requestData = $request->all();

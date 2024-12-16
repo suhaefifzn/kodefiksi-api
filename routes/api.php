@@ -68,7 +68,7 @@ Route::middleware('throttle:600,5')
                         Route::get('/{article:slug}', 'getOneArticle');
                     });
 
-                // all
+                // all roles
                 Route::middleware('auth.jwt')
                     ->group(function () {
                         Route::get('', 'getArticles');
@@ -77,6 +77,7 @@ Route::middleware('throttle:600,5')
                         Route::post('/upload-image', 'addImage');
                         Route::get('/images', 'getAllBodyImages');
                         Route::get('/stats', 'getStats');
+                        Route::get('/slugs', 'getSlugs');
                         Route::get('/{article:slug}', 'getOneArticle');
                         Route::put('/{article:slug}', 'editArticle');
                         Route::delete('/{article:slug}', 'deleteArticle');
