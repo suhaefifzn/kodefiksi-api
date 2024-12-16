@@ -236,7 +236,7 @@ class ArticleController extends Controller
     public function getSlugs() {
         $slugs = Article::where('is_draft', 'false')
             ->select('id', 'slug', 'updated_at')
-            ->orderBy('updated_at')
+            ->orderBy('updated_at', 'DESC')
             ->get();
 
         return $this->successfulResponseJSON(null, [
