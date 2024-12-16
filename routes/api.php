@@ -9,7 +9,7 @@ use App\Http\Controllers\Users\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Authentications
-Route::middleware('throttle:120,1')
+Route::middleware('throttle:600,5')
     ->group(function () {
         Route::controller(AuthenticationController::class)
             ->prefix('authentications')
@@ -31,17 +31,6 @@ Route::middleware('throttle:120,1')
                         Route::put('/profile', 'updateProfile');
                         Route::put('/password', 'updatePassword');
                         Route::post('/image', 'updateImage');
-                    });
-
-                // admin only
-                Route::middleware('auth.admin')
-                    ->group(function () {
-                        Route::get('', 'getUsers');
-                        Route::post('', 'addUser');
-                        Route::get('/{user:username}', 'getOneUser');
-                        Route::delete('/{user:username}', 'deleteUser');
-                        Route::put('/{user:username}', 'updateProfileUser');
-                        Route::put('/{user:username}/password', 'updatePasswordUser');
                     });
             });
 
@@ -79,7 +68,7 @@ Route::middleware('throttle:120,1')
                         Route::get('/{article:slug}', 'getOneArticle');
                     });
 
-                // members
+                // all
                 Route::middleware('auth.jwt')
                     ->group(function () {
                         Route::get('', 'getArticles');
