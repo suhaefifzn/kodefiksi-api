@@ -94,7 +94,7 @@ class CategoryController extends Controller
          */
         $selectedUserColumns = 'user:id,name,username,email';
         $selectedArticleColumns = ['user_id', 'title', 'slug', 'is_draft'];
-        $query = $category->articles()->with($selectedUserColumns);
+        $query = $category->articles()->with($selectedUserColumns)->orderBy('updated_at', 'DESC');
 
         if (auth()->user()->is_admin) {
             $allArticles = $query->get($selectedArticleColumns);

@@ -14,7 +14,7 @@ Route::middleware('throttle:600,5')
         Route::controller(AuthenticationController::class)
             ->prefix('authentications')
             ->group(function () {
-                Route::post('', 'login');
+                Route::post('', 'login')->middleware('throttle:3,1');
                 Route::delete('', 'logout')->middleware('auth.jwt');
                 Route::get('/check', 'check')->middleware('auth.jwt');
             });

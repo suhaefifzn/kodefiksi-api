@@ -35,7 +35,7 @@ class ArticleController extends Controller
         $selectedArticleColumns = ['title', 'slug', 'is_draft', 'created_at', 'updated_at', 'category_id', 'user_id'];
         $query = Article::where('user_id', auth()->user()->id)
             ->with(['category:id,name', 'user:id,username'])
-            ->orderBy('id', 'DESC');
+            ->orderBy('updated_at', 'DESC');
 
         if ($isDraft) {
             $validatedIsDraft = filter_var($isDraft, FILTER_VALIDATE_BOOLEAN);
