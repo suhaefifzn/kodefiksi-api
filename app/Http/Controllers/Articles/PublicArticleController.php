@@ -53,10 +53,10 @@ class PublicArticleController extends Controller
 
     public function getArticles(Request $request) {
         $validator = Validator::make($request->all(), [
-            'search' => 'string|min:3|max:100|regex:/^[a-zA-Z0-9\s]+$/',
-            'category' => 'string|min:3|max:100|regex:/^[a-zA-Z0-9\s]+$/',
-            'username' => 'string|min:3|max:100|regex:/^[a-zA-Z0-9\s]+$/',
-            'page' => 'integer|min:1|max:100|regex:/^[a-zA-Z0-9\s]+$/',
+            'search' => 'string|min:3|max:100|regex:/^[a-zA-Z0-9\s:?!,\.@#\$%&\*\-]+$/',
+            'category' => 'string|min:3|max:100|regex:/^[a-zA-Z0-9\s:?!,\.@#\$%&\*\-]+$/',
+            'username' => 'string|min:3|max:100|regex:/^[a-zA-Z0-9\s:?!,\.@#\$%&\*\-]+$/',
+            'page' => 'integer|min:1|max:100|regex:/^[a-zA-Z0-9\s:?!,\.@#\$%&\*\-]+$/',
         ]);
 
         if ($validator->fails()) {
@@ -70,16 +70,12 @@ class PublicArticleController extends Controller
 
         if ($request->has('username') and $request->has('page')) {
             $username = htmlspecialchars($request->query('username'));
-            return self::getByAuthor($request->query('username'), $request->query('page'));
+            return self::getByAuthor($username, $request->query('page'));
         }
 
         if ($request->has('search') and $request->has('page')) {
             $search = htmlspecialchars($request->query('search'));
             return self::getBySearch($search, $request->query('page'));
-        }
-
-        if ($request->has('page')) {
-            return self::getByPagination($request->query('page'));
         }
 
         return parent::failedResponseJSON('Query was not found', 404);
@@ -192,28 +188,6 @@ class PublicArticleController extends Controller
             }
         }
 
-        return parent::failedResponseJSON('The value for the page query in the URL was not valid', 400);
-    }
-
-    private function getByPagination($pageNumber) {
-        $validatedValueQueryPage = filter_var($pageNumber, FILTER_VALIDATE_INT);
-
-        if ($validatedValueQueryPage) {
-            if (Redis::exists(parent::getKeyPublicArticlesPerPagination($validatedValueQueryPage))) {
-                $response = json_decode(Redis::get(parent::getKeyPublicArticlesPerPagination($validatedValueQueryPage)));
-            } else {
-                $articles = Article::orderBy('created_at', 'DESC')
-                    ->select($this->selectedColumns)
-                    ->with($this->withTables)
-                    ->where('is_draft', false)
-                    ->paginate($this->totalItemsPerPage);
-
-                $response = self::setFormatResponse($articles);
-                $encodedArticles = json_encode($response);
-                Redis::set(parent::getKeyPublicArticlesPerPagination($validatedValueQueryPage), $encodedArticles);
-            }
-            return parent::successfulResponseJSON(null, $response);
-        }
         return parent::failedResponseJSON('The value for the page query in the URL was not valid', 400);
     }
 
