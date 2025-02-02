@@ -97,7 +97,7 @@ class PublicArticleController extends Controller
                 $relatedArticles = Article::where('category_id', $article['category_id'])
                     ->where('is_draft', false)
                     ->whereNot('slug', $article['slug'])
-                    ->orderBy('created_at', 'DESC')
+                    ->inRandomOrder()
                     ->limit(3)
                     ->get(['slug', 'title', 'img_thumbnail', 'excerpt']);
 
