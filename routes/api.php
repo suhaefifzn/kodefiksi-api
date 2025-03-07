@@ -13,7 +13,7 @@ Route::get('/', function () {
         'success' => false,
         'message' => 'Need authentication first!'
     ], 403);
-})->middleware('auth.jwt');
+});
 
 // Authentications
 Route::group(function () {
