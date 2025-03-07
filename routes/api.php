@@ -8,7 +8,12 @@ use App\Http\Controllers\Categories\CategoryController;
 use App\Http\Controllers\Users\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/')->middleware('auth.jwt');
+Route::get('/', function () {
+    return response()->json([
+        'success' => false,
+        'message' => 'Need authentication first!'
+    ], 403);
+})->middleware('auth.jwt');
 
 // Authentications
 Route::group(function () {
