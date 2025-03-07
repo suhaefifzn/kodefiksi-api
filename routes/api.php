@@ -8,9 +8,10 @@ use App\Http\Controllers\Categories\CategoryController;
 use App\Http\Controllers\Users\UserController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/')->middleware('auth.jwt');
+
 // Authentications
-Route::middleware('throttle:600,5')
-    ->group(function () {
+Route::group(function () {
         Route::controller(AuthenticationController::class)
             ->prefix('authentications')
             ->group(function () {
