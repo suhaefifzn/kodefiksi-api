@@ -93,21 +93,12 @@ class PublicArticleController extends Controller
             if ($article) {
                 $article = $article->toArray();
 
-                // get related articles
-                $relatedArticles = Article::where('category_id', $article['category_id'])
-                    ->where('is_draft', false)
-                    ->whereNot('slug', $article['slug'])
-                    ->inRandomOrder()
-                    ->limit(3)
-                    ->get(['slug', 'title', 'img_thumbnail', 'excerpt']);
-
                 // get newest articles
                 $newestArticles = Article::orderBy('created_at', 'DESC')
                     ->where('is_draft', false)
                     ->limit(3)
                     ->get(['slug', 'title', 'img_thumbnail', 'created_at']);
 
-                $article['related_articles'] = $relatedArticles;
                 $article['newest_articles'] = $newestArticles;
 
                 unset($article['category_id']);
