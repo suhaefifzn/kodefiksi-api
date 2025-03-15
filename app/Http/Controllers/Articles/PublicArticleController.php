@@ -97,7 +97,7 @@ class PublicArticleController extends Controller
                 $newestArticles = Article::orderBy('created_at', 'DESC')
                     ->where('is_draft', false)
                     ->limit(3)
-                    ->get(['slug', 'title', 'img_thumbnail', 'created_at']);
+                    ->get(['slug', 'title', 'img_thumbnail', 'created_at', 'updated_at']);
 
                 $article['newest_articles'] = $newestArticles;
 
@@ -250,11 +250,6 @@ class PublicArticleController extends Controller
 
     private function setFormatResponse($responseData) {
         $articlesArray = $responseData->toArray();
-        $articlesArray['data'] = array_map(function($article) {
-            unset($article['category_id'], $article['user_id']);
-            return $article;
-        }, $articlesArray['data']);
-
         $response = [
             'articles' => $articlesArray['data'],
             'meta' =>[
