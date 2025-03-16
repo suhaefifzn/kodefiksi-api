@@ -33,9 +33,9 @@ class ArticleController extends Controller
 
     public function getArticles(Request $request) {
         $isDraft = $request->query('is_draft');
-        $selectedArticleColumns = ['title', 'slug', 'is_draft', 'created_at', 'updated_at', 'category_id', 'user_id'];
+        $selectedArticleColumns = ['title', 'slug', 'is_draft', 'created_at', 'updated_at', 'category_id', 'user_id', 'lang_id'];
         $query = Article::where('user_id', auth()->user()->id)
-            ->with(['category:id,name', 'user:id,username'])
+            ->with(['category:id,name', 'user:id,username', 'language'])
             ->orderBy('updated_at', 'DESC');
 
         if ($isDraft) {
