@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\File;
 use App\Models\Article;
 use App\Models\ArticleImage;
 use App\Models\Category;
+use App\Models\Language;
 
 // Custom rules
 use App\Rules\MinWordsRule;
@@ -235,15 +236,22 @@ class ArticleController extends Controller
         return $this->successfulResponseJSON(null, $response);
     }
 
-    public function getSlugs() {
-        $slugs = Article::where('is_draft', 'false')
-            ->select('id', 'slug', 'updated_at')
-            ->orderBy('updated_at', 'DESC')
-            ->get();
+    public function getSlugs(Request $request) {
+        $languageExists = Language::where('code', $request->query('lang'))->first();
 
-        return $this->successfulResponseJSON(null, [
-            'slugs' => $slugs
-        ]);
+        if ($languageExists) {
+            $slugs = Article::where('is_draft', 'false')
+                ->where('lang_id', $languageExists->id)
+                ->select('id', 'slug', 'updated_at')
+                ->orderBy('updated_at', 'DESC')
+                ->get();
+
+            return $this->successfulResponseJSON(null, [
+                'slugs' => $slugs
+            ]);
+        }
+
+        return $this->failedResponseJSON('Language code not found', 404);
     }
 
     private function setRequestData(mixed $request) {
