@@ -15,21 +15,27 @@ use App\Models\User;
 
 class PublicArticleController extends Controller
 {
-    private $selectedColumns = ['title', 'slug', 'img_thumbnail','created_at', 'updated_at', 'category_id', 'user_id', 'excerpt'];
-    private $withTables = ['category:id,name,slug', 'user:id,name,username'];
+    private $selectedColumns = ['title', 'slug', 'img_thumbnail','created_at', 'updated_at', 'category_id', 'user_id', 'lang_id', 'excerpt'];
+    private $withTables = ['category:id,name,slug', 'user:id,name,username', 'language:id,code,name'];
     private $totalItemsPerPage = 9;
 
-    public function getHomeArticles() {
+    public function getHomeArticles(Request $request) {
+        if ($request->query('lang') === 'en') {
+            return self::getHomeArticlesEN();
+        }
+
         if (Redis::exists(parent::getKeyPublicHomeArticles())) {
             $articles = json_decode(Redis::get(parent::getKeyPublicHomeArticles()), true);
         } else {
             $latestArticle = Article::where('is_draft', false)
+                ->where('lang_id', 1)
                 ->select($this->selectedColumns)
                 ->with($this->withTables)
                 ->latest()->first();
 
             $categories = Category::with(['articles' => function ($query) use ($latestArticle) {
                 $query->where('is_draft', false)
+                    ->where('lang_id', 1)
                     ->whereNot('slug', $latestArticle->slug)
                     ->select($this->selectedColumns)
                     ->with('user')->latest()->take(3);
@@ -65,6 +71,11 @@ class PublicArticleController extends Controller
 
         if ($request->has('category') and $request->has('page')) {
             $category = htmlspecialchars($request->query('category'));
+
+            if ($request->query('lang') === 'en') {
+                return self::getByCategoryEN($category, $request->query('page'));
+            }
+
             return self::getByCategory($category, $request->query('page'));
         }
 
@@ -81,11 +92,16 @@ class PublicArticleController extends Controller
         return parent::failedResponseJSON('Query was not found', 404);
     }
 
-    public function getOneArticle(Article $article) {
+    public function getOneArticle(Article $article, Request $request) {
+        if ($request->query('lang') === 'en') {
+            return self::getOneArticleEN($article);
+        }
+
         if (Redis::exists(parent::getKeyPublicOneArticle($article->slug))) {
             $article = json_decode(Redis::get(parent::getKeyPublicOneArticle($article->slug)), true);
         } else {
             $article = $article->where('slug', $article->slug)
+                ->where('lang_id', 1)
                 ->where('is_draft', false)
                 ->with(['category:id,name,slug', 'user:id,name,username'])
                 ->first();
@@ -95,7 +111,9 @@ class PublicArticleController extends Controller
 
                 // get newest articles
                 $newestArticles = Article::orderBy('created_at', 'DESC')
+                    ->where('lang_id', 1)
                     ->where('is_draft', false)
+                    ->whereNot('slug', $article['slug'])
                     ->limit(3)
                     ->get(['slug', 'title', 'img_thumbnail', 'created_at', 'updated_at']);
 
@@ -145,6 +163,7 @@ class PublicArticleController extends Controller
             } else {
                 $searchTerm = strtolower($searchTerm);
                 $query = Article::where('is_draft', false)
+                    ->where('lang_id', 1)
                     ->orderBy('created_at', 'DESC')
                     ->select($this->selectedColumns)
                     ->with($this->withTables);
@@ -196,6 +215,7 @@ class PublicArticleController extends Controller
                         )));
                     } else {
                         $articles = Article::where('category_id', $categoryExists['id'])
+                            ->where('lang_id', 1)
                             ->orderBy('created_at', 'DESC')
                             ->select($this->selectedColumns)
                             ->with($this->withTables)
@@ -229,6 +249,7 @@ class PublicArticleController extends Controller
                         )));
                     } else {
                         $articles = Article::where('user_id', $userExists['id'])
+                            ->where('lang_id', 1)
                             ->orderBy('created_at', 'DESC')
                             ->select($this->selectedColumns)
                             ->with($this->withTables)
@@ -262,5 +283,112 @@ class PublicArticleController extends Controller
         ];
 
         return $response;
+    }
+
+    private function getHomeArticlesEN() {
+        $redisKey = 'public:home:articles:en';
+
+        if (Redis::exists($redisKey)) {
+            $articles = json_decode(Redis::get($redisKey), true);
+        } else {
+            $latestArticle = Article::where('is_draft', false)
+                ->where('lang_id', 2)
+                ->whereIn('category_id', [1, 2])
+                ->select($this->selectedColumns)
+                ->with($this->withTables)
+                ->latest()
+                ->first();
+
+            $categories = Category::whereIn('id', [1, 2])
+                ->with(['articles' => function ($query) use ($latestArticle) {
+                    $query->where('is_draft', false)
+                        ->where('lang_id', 2)
+                        ->whereNot('slug', $latestArticle->slug)
+                        ->select($this->selectedColumns)
+                        ->with(['user:id,name,username', 'language'])
+                        ->latest()
+                        ->take(4);
+                }])->get();
+
+            $articles = [
+                'articles' => [
+                    'latest' => $latestArticle,
+                    'per_categories' => $categories
+                ]
+            ];
+
+            $encodedArticles = json_encode($articles);
+
+            Redis::set($redisKey, json_encode($articles));
+        }
+
+        return parent::successfulResponseJSON(null, $articles);
+    }
+
+    private function getByCategoryEN($categorySlug, $pageNumber = 1) {
+        $redisKey = 'public:articles:category:en:';
+        $validatedValueQueryPage = filter_var($pageNumber, FILTER_VALIDATE_INT);
+        $arrCategoriesSlug = ['anime', 'game'];
+
+        if (!in_array($categorySlug, $arrCategoriesSlug)) {
+            return parent::failedResponseJSON('The value for the page query in the URL was not valid', 400);
+        }
+
+        $categoryExists = Category::where('slug', $categorySlug)->first();
+
+        if ($categoryExists) {
+            if ($validatedValueQueryPage) {
+                if (Redis::exists(($redisKey . $categorySlug . ':' . $validatedValueQueryPage))) {
+                        $response = json_decode(Redis::get(($redisKey . $categorySlug . ':' . $validatedValueQueryPage)));
+                    } else {
+                        $articles = Article::where('category_id', $categoryExists['id'])
+                            ->where('lang_id', 2)
+                            ->orderBy('created_at', 'DESC')
+                            ->select($this->selectedColumns)
+                            ->with($this->withTables)
+                            ->where('is_draft', false)
+                            ->paginate(8);
+
+                        $response = self::setFormatResponse($articles);
+                        $encodedArticles = json_encode($response);
+                        Redis::set(($redisKey . $categorySlug . ':' . $validatedValueQueryPage), $encodedArticles);
+                    }
+
+                    return parent::successfulResponseJSON(null, $response);
+            }
+
+            return parent::failedResponseJSON('The value for the page query in the URL was not valid', 400);
+        }
+
+        return parent::failedResponseJSON('The value for the category query in the URL was not found', 404);
+    }
+
+    private function getOneArticleEN($article) {
+        $redisKey = 'public:article:en:';
+
+        if (Redis::exists($redisKey . $article->slug)) {
+            $article = json_decode(Redis::get($redisKey . $article->slug), true);
+        } else {
+            $article = $article->where('slug', $article->slug)
+                ->where('is_draft', false)
+                ->where('lang_id', 2)
+                ->with(['category:id,name,slug', 'user:id,name,username'])
+                ->first();
+
+            if ($article) {
+                $article = $article->toArray();
+
+                unset($article['category_id']);
+                unset($article['user_id']);
+
+                // save to cache
+                $encodedArticle = json_encode($article);
+                Redis::set($redisKey . $article['slug'], $encodedArticle);
+            } else {
+                return $this->failedResponseJSON('Article was not found', 404);
+            }
+        }
+
+        return $this->successfulResponseJSON(null, $article);
     }
 }

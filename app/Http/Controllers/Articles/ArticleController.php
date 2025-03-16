@@ -107,6 +107,7 @@ class ArticleController extends Controller
     public function addArticle(Request $request) {
         $request->validate([
             'category_id' => 'required|exists:categories,id',
+            'lang_id' => 'required|exists:languages,id',
             'title' => 'required|string|min:10|max:255',
             'slug' => 'nullable|string|unique:articles,slug',
             'img_thumbnail' => 'required|file|mimes:png,jpg,webp|max:2048',
@@ -123,6 +124,7 @@ class ArticleController extends Controller
     public function editArticle(Request $request, Article $article) {
         $request->validate([
             'category_id' => 'required|exists:categories,id',
+            'lang_id' => 'required|exists:languages,id',
             'title' => 'required|string|min:10|max:255',
             'img_thumbnail' => 'nullable|file|mimes:png,jpg,webp|max:2048',
             'is_draft' => ['required', 'string', new TextToBooleanRule()],
@@ -294,7 +296,7 @@ class ArticleController extends Controller
             // get all articles and save to cache for search features
             $articles = Article::orderBy('created_at', 'DESC')
                 ->where('is_draft', false)
-                ->select(['title', 'slug', 'img_thumbnail','created_at', 'updated_at', 'category_id', 'user_id', 'excerpt'])
+                ->select(['title', 'slug', 'img_thumbnail','created_at', 'updated_at', 'category_id', 'user_id', 'lang_id', 'excerpt'])
                 ->with(['category:id,name,slug', 'user:id,name,username'])
                 ->get();
             $encodedArticles = json_encode($articles);

@@ -26,6 +26,6 @@ class ClientToken
             'status' => 'fail',
             'error' => 'Token',
             'message' => 'Client token not found'
-        ]);
+        ], 401);
     }
 }

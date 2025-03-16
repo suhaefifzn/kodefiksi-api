@@ -46,4 +46,8 @@ class Article extends Model
     public function user() {
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
+
+    public function language() {
+        return $this->belongsTo(Language::class, 'lang_id', 'id');
+    }
 }
