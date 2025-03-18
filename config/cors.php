@@ -17,7 +17,9 @@ return [
 
     'paths' => ['*'],
     'allowed_methods' => ['*'],
-    'allowed_origins' => ['https://kodefiksi.com', 'https://dashboard.kodefiksi.com', 'https://nerdcounter.com', 'https://www.nerdcounter.com'],
+    'allowed_origins' => config('app.env') === 'local'
+        ? ['*']
+        : ['https://kodefiksi.com', 'https://dashboard.kodefiksi.com', 'https://nerdcounter.com', 'https://www.nerdcounter.com'],
     'allowed_origins_patterns' => [],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
