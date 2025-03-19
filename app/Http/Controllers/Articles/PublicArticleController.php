@@ -344,9 +344,11 @@ class PublicArticleController extends Controller
                             ->orderBy('created_at', 'DESC')
                             ->with($this->withTables)
                             ->where('is_draft', false)
-                            ->paginate(8);
+                            ->get();
 
-                        $response = self::setFormatResponse($articles);
+                        $response = [
+                            'articles' => $articles
+                        ];
                         $encodedArticles = json_encode($response);
                         Redis::set(($redisKey . $categorySlug . ':' . $validatedValueQueryPage), $encodedArticles);
                     }
