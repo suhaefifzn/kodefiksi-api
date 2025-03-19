@@ -294,7 +294,6 @@ class PublicArticleController extends Controller
             $latestArticle = Article::where('is_draft', false)
                 ->where('lang_id', 2)
                 ->whereIn('category_id', [1, 2])
-                ->select($this->selectedColumns)
                 ->with($this->withTables)
                 ->latest()
                 ->first();
@@ -304,7 +303,6 @@ class PublicArticleController extends Controller
                     $query->where('is_draft', false)
                         ->where('lang_id', 2)
                         ->whereNot('slug', $latestArticle->slug)
-                        ->select($this->selectedColumns)
                         ->with(['user:id,name,username', 'language'])
                         ->latest()
                         ->take(4);
@@ -344,7 +342,6 @@ class PublicArticleController extends Controller
                         $articles = Article::where('category_id', $categoryExists['id'])
                             ->where('lang_id', 2)
                             ->orderBy('created_at', 'DESC')
-                            ->select($this->selectedColumns)
                             ->with($this->withTables)
                             ->where('is_draft', false)
                             ->paginate(8);
