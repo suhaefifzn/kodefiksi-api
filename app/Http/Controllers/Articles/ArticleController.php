@@ -133,7 +133,7 @@ class ArticleController extends Controller
             'keyword' => 'required|string',
             'img_thumbnail' => 'nullable|file|mimes:png,jpg,webp|max:2048',
             'is_draft' => ['required', 'string', new TextToBooleanRule()],
-            'excerpt' => 'required|string|min:140|max:200',
+            'excerpt' => 'required|string|min:120|max:160',
             'body' => ['required', 'string', new MinWordsRule(350)]
         ]);
 
