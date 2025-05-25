@@ -7,6 +7,7 @@ use App\Http\Controllers\Caches\CacheController;
 use App\Http\Controllers\Categories\CategoryController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Languages\LanguageController;
+use App\Http\Controllers\Articles\ArticleTypeController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -84,6 +85,7 @@ Route::controller(ArticleController::class)
                 Route::get('/images', 'getAllBodyImages');
                 Route::get('/stats', 'getStats');
                 Route::get('/slugs', 'getSlugs');
+                Route::get('/types', [ArticleTypeController::class, 'getAll']);
                 Route::get('/{article:slug}', 'getOneArticle');
                 Route::put('/{article:slug}', 'editArticle');
                 Route::delete('/{article:slug}', 'deleteArticle');

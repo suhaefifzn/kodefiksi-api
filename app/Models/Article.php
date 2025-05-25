@@ -50,4 +50,8 @@ class Article extends Model
     public function language() {
         return $this->belongsTo(Language::class, 'lang_id', 'id');
     }
+
+    public function type() {
+        return $this->belongsTo(ArticleType::class, 'article_type_id', 'id');
+    }
 }

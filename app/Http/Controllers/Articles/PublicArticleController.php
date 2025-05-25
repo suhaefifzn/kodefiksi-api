@@ -103,7 +103,7 @@ class PublicArticleController extends Controller
             $article = $article->where('slug', $article->slug)
                 ->where('lang_id', 1)
                 ->where('is_draft', false)
-                ->with(['category:id,name,slug', 'user:id,name,username'])
+                ->with(['category:id,name,slug', 'user:id,name,username', 'type:id,name'])
                 ->first();
 
             if ($article) {

@@ -71,7 +71,7 @@ class ArticleController extends Controller
                 $article = Redis::get($this->cacheOneArticleKey . $article->id);
                 $article = json_decode($article);
             } else {
-                $article = Article::with(['category', 'user:id,name,username,email'])
+                $article = Article::with(['category', 'user:id,name,username,email', 'type:id,name'])
                     ->find($article->id);
 
                 // save to cache
@@ -108,12 +108,14 @@ class ArticleController extends Controller
     public function addArticle(Request $request) {
         $request->validate([
             'category_id' => 'required|exists:categories,id',
+            'article_type_id' => 'required|exists:article_types,id',
             'lang_id' => 'required|exists:languages,id',
             'title' => 'required|string|min:10|max:255',
             'slug' => 'nullable|string|unique:articles,slug',
+            'keyword' => 'required|string',
             'img_thumbnail' => 'required|file|mimes:png,jpg,webp|max:2048',
             'is_draft' => ['required', 'string', new TextToBooleanRule()],
-            'excerpt' => 'required|string|min:140|max:200',
+            'excerpt' => 'required|string|min:120|max:160',
             'body' => ['required', 'string', new MinWordsRule(350)]
         ]);
 
@@ -125,8 +127,10 @@ class ArticleController extends Controller
     public function editArticle(Request $request, Article $article) {
         $request->validate([
             'category_id' => 'required|exists:categories,id',
+            'article_type_id' => 'required|exists:article_types,id',
             'lang_id' => 'required|exists:languages,id',
             'title' => 'required|string|min:10|max:255',
+            'keyword' => 'required|string',
             'img_thumbnail' => 'nullable|file|mimes:png,jpg,webp|max:2048',
             'is_draft' => ['required', 'string', new TextToBooleanRule()],
             'excerpt' => 'required|string|min:140|max:200',
@@ -317,7 +321,7 @@ class ArticleController extends Controller
         return $this->failedResponseJSON('Article failed to create');
     }
 
-    private function storeImageThumbnail($newImgThumbnail, string $pathOldImgThumbnail = null) {
+    private function storeImageThumbnail($newImgThumbnail, $pathOldImgThumbnail = null) {
         if (!is_null($pathOldImgThumbnail)) {
             $explodedPath = explode('/', $pathOldImgThumbnail);
             $fileImage = end($explodedPath); // filename at last index
