@@ -19,7 +19,7 @@ return [
     'allowed_methods' => ['*'],
     'allowed_origins' => config('app.env') === 'local'
         ? ['*']
-        : ['https://kodefiksi.com', 'https://dashboard.kodefiksi.com'],
+        : ['https://kodefiksi.com', 'https://dashboard.kodefiksi.com', 'https://cms.kodefiksi.com'],
     'allowed_origins_patterns' => [],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
